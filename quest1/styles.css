@@ -1,19 +1,31 @@
-/* Style for the HTML, body, and canvas container */
-html, body, .container {
-  overflow: hidden;
-  display: flex;
-  height: 100%;
+html, body {
   margin: 0;
   padding: 0;
-  place-content: center center;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #000;
+  color: #fff;
+  font-family: Arial, sans-serif;
 }
 
-/* Canvas style */
-#renderCanvas {
-  image-rendering: pixelated;
-  display: block;
-  max-width: 100%;
+h1 {
+  margin: 10px 0;
+  text-align: center;
+}
+
+p {
+  text-align: center;
+  margin: 0 0 20px 0;
+}
+
+#renderArea {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
-  height: 100%;
-  touch-action: none;
+  height: calc(100% - 80px); /* Account for header and description */
 }

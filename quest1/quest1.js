@@ -1,7 +1,8 @@
 async function init() {
   const canvas = document.createElement("canvas");
-  canvas.id = "renderCanvas";
-  document.body.appendChild(canvas);
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.getElementById("renderArea").appendChild(canvas);
 
   if (!navigator.gpu) {
     console.error("WebGPU is not supported in this browser.");
@@ -14,11 +15,12 @@ async function init() {
   const format = navigator.gpu.getPreferredCanvasFormat();
   context.configure({ device, format });
 
+  // Define vertices for shapes
   const vertices = new Float32Array([
     // Triangle
-    0.0, 0.5, 1.0, 0.0, 0.0,
-   -0.5, -0.5, 0.0, 1.0, 0.0,
-    0.5, -0.5, 0.0, 0.0, 1.0,
+    0.0, 0.6, 1.0, 0.0, 0.0,
+   -0.6, -0.3, 0.0, 1.0, 0.0,
+    0.6, -0.3, 0.0, 0.0, 1.0,
 
     // Square
    -0.3, 0.3, 1.0, 1.0, 0.0,
@@ -26,12 +28,12 @@ async function init() {
     0.3, 0.3, 1.0, 0.5, 0.5,
     0.3, -0.3, 0.5, 0.5, 1.0,
 
-    // Pentagon
-    0.0, 0.6, 1.0, 0.0, 0.0,
-   -0.4, 0.2, 0.0, 1.0, 0.0,
-   -0.2, -0.4, 0.0, 0.0, 1.0,
-    0.2, -0.4, 1.0, 1.0, 0.0,
-    0.4, 0.2, 0.0, 1.0, 1.0,
+    // Star (complex shape)
+    0.0,  0.5,  1.0, 0.0, 1.0,
+   -0.2,  0.1,  0.5, 1.0, 0.5,
+    0.2,  0.1,  0.5, 0.5, 1.0,
+   -0.4, -0.2,  1.0, 1.0, 0.0,
+    0.4, -0.2,  0.5, 0.0, 1.0,
   ]);
 
   const vertexBuffer = device.createBuffer({
@@ -40,6 +42,7 @@ async function init() {
   });
   device.queue.writeBuffer(vertexBuffer, 0, vertices);
 
+  // Shaders
   const shaderCode = `
     @vertex
     fn vertexMain(@location(0) pos: vec2f, @location(1) color: vec3f) -> @builtin(position) vec4f {
@@ -91,7 +94,7 @@ async function init() {
   pass.setVertexBuffer(0, vertexBuffer);
   pass.draw(3, 1, 0, 0); // Triangle
   pass.draw(4, 1, 3, 0); // Square
-  pass.draw(5, 1, 7, 0); // Pentagon
+  pass.draw(5, 1, 7, 0); // Star
   pass.end();
 
   device.queue.submit([commandEncoder.finish()]);
