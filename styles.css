@@ -1,29 +1,31 @@
-/* Apply a static black background initially */
+/* Initial static black background */
 html, body {
-    overflow: visible;
+    overflow: hidden; /* Prevent scrolling */
     width: 100%;
     height: 100%;
     margin: 0;
     padding: 0;
-    background: #000000; /* Initially black background */
+    background: #000000; /* Static black background before the spell */
     color: #fefefe;
     font-family: 'Roboto', sans-serif;
     position: relative;
 }
 
-/* Dynamic background lighting effect after spell is cast */
+/* Activate gradient animation after the spell */
 body.active {
-    animation: backgroundColorChange 10s infinite;
+    background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+    background-size: 400% 400%;
+    animation: gradientBackground 10s ease infinite; /* Smooth gradient transition */
 }
 
-/* Keyframes for changing background gradient */
-@keyframes backgroundColorChange {
-    0% { background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); }
-    50% { background: linear-gradient(135deg, #fdbb2d, #b21f1f, #1a2a6c); }
-    100% { background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); }
+/* Gradient background animation */
+@keyframes gradientBackground {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-/* Style for the light effect */
+/* Mouse-following light effect */
 #lightEffect {
     position: absolute;
     width: 150px;
@@ -35,12 +37,23 @@ body.active {
     display: none; /* Initially hidden */
 }
 
-/* Style the main heading */
+/* Style for the main heading */
 h1 {
     text-align: center;
     margin-top: 40px;
     font-size: 3rem;
     text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+    animation: glowText 2s ease-in-out infinite alternate; /* Glow animation for heading */
+}
+
+/* Glow animation for the heading */
+@keyframes glowText {
+    from {
+        text-shadow: 0 0 10px #ffffff, 0 0 20px #ff00ff, 0 0 30px #ff00ff;
+    }
+    to {
+        text-shadow: 0 0 20px #ff00ff, 0 0 30px #ff00ff, 0 0 40px #ff00ff;
+    }
 }
 
 /* Style for paragraphs */
@@ -50,6 +63,7 @@ p {
     margin: 20px auto;
     max-width: 600px;
     line-height: 1.6;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /* Style for the button */
@@ -74,7 +88,7 @@ button:hover {
     background: linear-gradient(90deg, #ff758c, #ff7eb3);
 }
 
-/* Style for the spell result */
+/* Spell result text style */
 #spellResult {
     margin-top: 20px;
     text-align: center;
