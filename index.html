@@ -5,7 +5,7 @@
     <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
-    <h1>SP 25 Apprentice Titus’s Arcane Portal!</h1>
+    <h1>Welcome to My Arcane Portal!</h1>
     <p>This portal is a magical space to learn and explore the art of computer graphics.</p>
 
     <!-- Button to cast a spell -->
@@ -27,7 +27,7 @@
 
         function castSpell() {
             document.getElementById("spellResult").innerText = "Light has filled the portal!";
-            document.body.style.backgroundColor = '#121212'; /* Dark mode background */
+            document.body.classList.add('active'); /* Add the active class to start background animation */
             lightEffect.style.display = 'block';
         }
     </script>

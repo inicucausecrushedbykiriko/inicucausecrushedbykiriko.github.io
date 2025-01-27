@@ -1,4 +1,4 @@
-/* Apply a darker background and smooth font styling */
+/* Apply a static black background initially */
 html, body {
     overflow: visible;
     width: 100%;
@@ -9,7 +9,20 @@ html, body {
     color: #fefefe;
     font-family: 'Roboto', sans-serif;
     position: relative;
-    transition: background-color 0.5s ease;
+}
+
+/* Style for dynamic background animation after the spell */
+body.active {
+    animation: backgroundColorChange 5s infinite;
+}
+
+/* Keyframes for changing background colors */
+@keyframes backgroundColorChange {
+    0% { background-color: #000000; }
+    25% { background-color: #1a1a40; }
+    50% { background-color: #2d2d80; }
+    75% { background-color: #4040b3; }
+    100% { background-color: #000000; }
 }
 
 /* Style for the light effect */
