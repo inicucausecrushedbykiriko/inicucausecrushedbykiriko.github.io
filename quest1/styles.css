@@ -1,26 +1,19 @@
-html, body {
+/* Style for the HTML, body, and canvas container */
+html, body, .container {
+  overflow: hidden;
+  display: flex;
+  height: 100%;
   margin: 0;
   padding: 0;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgb(109, 167, 135);
-  color: white;
+  place-content: center center;
 }
 
-#renderArea {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-}
-
-canvas {
-  width: 100%;
-  height: 100%;
+/* Canvas style */
+#renderCanvas {
+  image-rendering: pixelated;
   display: block;
+  max-width: 100%;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
 }
