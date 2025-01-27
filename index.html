@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SP 25 Apprentice Titus’s Arcane Portal</title>
+    <title>SP 25 Apprentice Titus’s Arcane Portal!</title>
     <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
-    <h1>SP 25 Apprentice Titus’s Arcane Portal</h1>
+    <h1>SP 25 Apprentice Titus’s Arcane Portal!</h1>
     <p>This portal is a magical space to learn and explore the art of computer graphics.</p>
 
     <!-- Button to cast a spell -->
     <button onclick="castSpell()">Let there be Light!</button>
     <p id="spellResult"></p>
 
-    <!-- JavaScript for light and background effects -->
+    <!-- JavaScript for light effects -->
     <script>
         const lightEffect = document.createElement('div');
         lightEffect.id = 'lightEffect';
@@ -22,7 +22,6 @@
             if (lightEffect.style.display === 'block') {
                 lightEffect.style.left = `${e.clientX}px`;
                 lightEffect.style.top = `${e.clientY}px`;
-                lightEffect.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 80%)`;
             }
         });
 
