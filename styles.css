@@ -5,7 +5,7 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    background: #000000; /* Initially black background */
+    background: #121212; /* Dark background */
     color: #fefefe;
     font-family: 'Roboto', sans-serif;
     position: relative;
@@ -13,16 +13,14 @@ html, body {
 
 /* Style for dynamic background animation after the spell */
 body.active {
-    animation: backgroundColorChange 5s infinite;
+    animation: gradientBackground 10s ease infinite;
 }
 
-/* Keyframes for changing background colors */
-@keyframes backgroundColorChange {
-    0% { background-color: #000000; }
-    25% { background-color: #1a1a40; }
-    50% { background-color: #2d2d80; }
-    75% { background-color: #4040b3; }
-    100% { background-color: #000000; }
+/* Keyframes for changing background gradient */
+@keyframes gradientBackground {
+    0% { background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); }
+    50% { background: linear-gradient(135deg, #fdbb2d, #b21f1f, #1a2a6c); }
+    100% { background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); }
 }
 
 /* Style for the light effect */
@@ -34,15 +32,25 @@ body.active {
     pointer-events: none;
     transform: translate(-50%, -50%);
     z-index: 9999;
-    display: none; /* Initially hidden */
+    display: none;
 }
 
-/* Style the main heading */
+/* Glow animation for text */
 h1 {
     text-align: center;
     margin-top: 40px;
     font-size: 3rem;
     text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+    animation: glowText 2s ease-in-out infinite alternate;
+}
+
+@keyframes glowText {
+    from {
+        text-shadow: 0 0 10px #ffffff, 0 0 20px #ff00ff, 0 0 30px #ff00ff;
+    }
+    to {
+        text-shadow: 0 0 20px #ff00ff, 0 0 30px #ff00ff, 0 0 40px #ff00ff;
+    }
 }
 
 /* Style for paragraphs */
@@ -52,6 +60,7 @@ p {
     margin: 20px auto;
     max-width: 600px;
     line-height: 1.6;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /* Style for the button */
@@ -69,14 +78,12 @@ button {
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
-/* Button hover effect */
 button:hover {
     transform: translateY(-5px);
     box-shadow: 0px 8px 10px rgba(0, 0, 0, 0.3);
     background: linear-gradient(90deg, #ff758c, #ff7eb3);
 }
 
-/* Style for the spell result */
 #spellResult {
     margin-top: 20px;
     text-align: center;
