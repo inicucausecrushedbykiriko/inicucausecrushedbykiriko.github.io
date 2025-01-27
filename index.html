@@ -1,24 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SP 25 Apprentice Titus’s Arcane Portal.</title>
+    <title>SP 25 Apprentice Titus’s Arcane Portal</title>
     <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
     <h1>Welcome to My Arcane Portal!</h1>
     <p>This portal is a magical space to learn and explore the art of computer graphics.</p>
-    
+
     <!-- Button to cast a spell -->
-    <button onclick="castSpell()">Click to Cast a Spell!</button>
+    <button onclick="castSpell()">Let there be Light!</button>
     <p id="spellResult"></p>
 
-    <!-- JavaScript to cast a spell -->
+    <!-- JavaScript for light effects -->
     <script>
+        document.body.addEventListener('mousemove', function(e) {
+            const light = document.getElementById('lightEffect');
+            light.style.left = `${e.clientX}px`;
+            light.style.top = `${e.clientY}px`;
+        });
+
         function castSpell() {
-            document.getElementById("spellResult").innerText = "Your spell has been cast successfully!";
+            document.getElementById("spellResult").innerText = "Light has filled the portal!";
         }
     </script>
-    
-    
+
+    <!-- Div for light effect -->
+    <div id="lightEffect"></div>
 </body>
 </html>
