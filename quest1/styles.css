@@ -6,7 +6,7 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: black;
+  background: rgb(109, 167, 135);
   color: white;
 }
 
