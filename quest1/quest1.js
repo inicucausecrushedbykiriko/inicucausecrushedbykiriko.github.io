@@ -1,8 +1,16 @@
 async function init() {
-  const canvas = document.createElement("canvas");
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  document.getElementById("renderArea").appendChild(canvas);
+  const canvas = document.createElement('canvas');
+  canvas.id = "renderCanvas";
+  document.body.appendChild(canvas);
+
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const width = window.innerWidth * devicePixelRatio;
+  const height = window.innerHeight * devicePixelRatio;
+
+  canvas.width = width;
+  canvas.height = height;
+  canvas.style.width = `${window.innerWidth}px`;
+  canvas.style.height = `${window.innerHeight}px`;
 
   if (!navigator.gpu) {
     console.error("WebGPU is not supported in this browser.");
@@ -11,29 +19,28 @@ async function init() {
 
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter.requestDevice();
-  const context = canvas.getContext("webgpu");
+  const context = canvas.getContext('webgpu');
   const format = navigator.gpu.getPreferredCanvasFormat();
   context.configure({ device, format });
 
-  // Define vertices for shapes
   const vertices = new Float32Array([
     // Triangle
-    0.0, 0.6, 1.0, 0.0, 0.0,
-   -0.6, -0.3, 0.0, 1.0, 0.0,
-    0.6, -0.3, 0.0, 0.0, 1.0,
+    0.0,  0.5,  1.0, 0.0, 0.0,
+   -0.5, -0.5,  0.0, 1.0, 0.0,
+    0.5, -0.5,  0.0, 0.0, 1.0,
 
     // Square
-   -0.3, 0.3, 1.0, 1.0, 0.0,
-   -0.3, -0.3, 0.0, 1.0, 1.0,
-    0.3, 0.3, 1.0, 0.5, 0.5,
-    0.3, -0.3, 0.5, 0.5, 1.0,
+   -0.3,  0.3,  1.0, 1.0, 0.0,
+   -0.3, -0.3,  0.0, 1.0, 1.0,
+    0.3,  0.3,  1.0, 0.5, 0.5,
+    0.3, -0.3,  0.5, 0.5, 1.0,
 
-    // Star (complex shape)
-    0.0,  0.5,  1.0, 0.0, 1.0,
-   -0.2,  0.1,  0.5, 1.0, 0.5,
-    0.2,  0.1,  0.5, 0.5, 1.0,
-   -0.4, -0.2,  1.0, 1.0, 0.0,
-    0.4, -0.2,  0.5, 0.0, 1.0,
+    // Star
+    0.0,  0.6,  1.0, 0.0, 1.0,
+   -0.2,  0.2,  0.5, 1.0, 0.5,
+    0.2,  0.2,  0.5, 0.5, 1.0,
+   -0.4, -0.4,  1.0, 1.0, 0.0,
+    0.4, -0.4,  0.5, 0.0, 1.0,
   ]);
 
   const vertexBuffer = device.createBuffer({
@@ -42,11 +49,10 @@ async function init() {
   });
   device.queue.writeBuffer(vertexBuffer, 0, vertices);
 
-  // Shaders
   const shaderCode = `
     @vertex
-    fn vertexMain(@location(0) pos: vec2f, @location(1) color: vec3f) -> @builtin(position) vec4f {
-      return vec4f(pos, 0.0, 1.0);
+    fn vertexMain(@location(0) position: vec2f, @location(1) color: vec3f) -> @builtin(position) vec4f {
+      return vec4f(position, 0.0, 1.0);
     }
 
     @fragment
@@ -81,21 +87,23 @@ async function init() {
   });
 
   const commandEncoder = device.createCommandEncoder();
-  const pass = commandEncoder.beginRenderPass({
-    colorAttachments: [{
-      view: context.getCurrentTexture().createView(),
-      clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
-      loadOp: "clear",
-      storeOp: "store",
-    }],
+  const renderPass = commandEncoder.beginRenderPass({
+    colorAttachments: [
+      {
+        view: context.getCurrentTexture().createView(),
+        clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
+        loadOp: "clear",
+        storeOp: "store",
+      },
+    ],
   });
 
-  pass.setPipeline(pipeline);
-  pass.setVertexBuffer(0, vertexBuffer);
-  pass.draw(3, 1, 0, 0); // Triangle
-  pass.draw(4, 1, 3, 0); // Square
-  pass.draw(5, 1, 7, 0); // Star
-  pass.end();
+  renderPass.setPipeline(pipeline);
+  renderPass.setVertexBuffer(0, vertexBuffer);
+  renderPass.draw(3, 1, 0, 0); // Triangle
+  renderPass.draw(4, 1, 3, 0); // Square
+  renderPass.draw(5, 1, 7, 0); // Star
+  renderPass.end();
 
   device.queue.submit([commandEncoder.finish()]);
 }
