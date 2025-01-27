@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SP 25 Apprentice Titus’s Arcane Portal</title>
+    <title>SP 25 Apprentice Titus’s Arcane Portal!</title>
     <link rel="stylesheet" type="text/css" href="styles.css">
 </head>
 <body>
@@ -14,18 +14,25 @@
 
     <!-- JavaScript for light effects -->
     <script>
+        const lightEffect = document.createElement('div');
+        lightEffect.id = 'lightEffect';
+        document.body.appendChild(lightEffect);
+
         document.body.addEventListener('mousemove', function(e) {
-            const light = document.getElementById('lightEffect');
-            light.style.left = `${e.clientX}px`;
-            light.style.top = `${e.clientY}px`;
+            if (lightEffect.style.display === 'block') {
+                lightEffect.style.left = `${e.clientX}px`;
+                lightEffect.style.top = `${e.clientY}px`;
+            }
         });
 
         function castSpell() {
             document.getElementById("spellResult").innerText = "Light has filled the portal!";
+            document.body.style.backgroundColor = '#121212'; /* Dark mode background */
+            lightEffect.style.display = 'block';
         }
     </script>
 
     <!-- Div for light effect -->
-    <div id="lightEffect"></div>
+    <div id="lightEffect" style="display: none;"></div>
 </body>
 </html>

@@ -5,10 +5,11 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    background: #121212; /* Dark background */
+    background: #000000; /* Initially black background */
     color: #fefefe;
     font-family: 'Roboto', sans-serif;
     position: relative;
+    transition: background-color 0.5s ease;
 }
 
 /* Style for the light effect */
@@ -20,6 +21,7 @@ html, body {
     pointer-events: none;
     transform: translate(-50%, -50%);
     z-index: 9999;
+    display: none; /* Initially hidden */
 }
 
 /* Style the main heading */
