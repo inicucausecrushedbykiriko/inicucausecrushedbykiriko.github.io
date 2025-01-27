@@ -1,16 +1,28 @@
-html, body {
+html, body, #renderArea {
+  overflow: hidden;
+  display: flex;
+  height: 100%;
   margin: 0;
   padding: 0;
-  height: 100%;
-  overflow: hidden;
-  background-color: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  place-content: center center;
+  background-color: black; /* Black background */
 }
 
-canvas {
+#renderCanvas {
   display: block;
+  max-width: 100%;
   width: 100%;
   height: 100%;
+  touch-action: none;
+}
+
+#caption {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 24px;
+  font-family: Arial, sans-serif;
+  text-shadow: 2px 2px 4px black;
 }
