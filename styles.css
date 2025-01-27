@@ -46,6 +46,26 @@ h1 {
     animation: glowText 2s ease-in-out infinite alternate; /* Glow animation for heading */
 }
 
+/* Style for the portal button */
+.portal-button {
+    display: inline-block;
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    color: rgb(11, 165, 226);
+    border: none;
+    border-radius: 50px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+    text-decoration: none; /* Remove underline */
+}
+
+.portal-button:hover {
+    transform: translateY(-5px);
+    box-shadow: 0px 8px 10px rgba(0, 0, 0, 0.3);
+}
+
+
 /* Glow animation for the heading */
 @keyframes glowText {
     from {
