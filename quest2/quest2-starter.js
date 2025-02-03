@@ -53,9 +53,8 @@ async function init() {
     )
   );
   
-  // Generate circle geometry (filled red circle)
   // Adjust radius, segments, and color (r, g, b, a) below:
-  let circleVertices = circleMaker(0.3, 72, 1, 0, 0, 1);
+  let circleVertices = circleMaker(0.15, 72, 1, 0, 0, 1);
 
   // Initialize PGA2D pose
   // The first four entries are the motor (rotation/translation),
