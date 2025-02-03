@@ -53,8 +53,10 @@ async function init() {
     )
   );
   
-  // Adjust radius, segments, and color (r, g, b, a) below:
-  let circleVertices = circleMaker(0.15, 72, 1, 0, 0, 1);
+  // Generate a rainbow sun with 200 pointillism dots
+  let circleVertices = circleMaker(0.1, 72, 100000);
+
+
 
   // Initialize PGA2D pose
   // The first four entries are the motor (rotation/translation),
