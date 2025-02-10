@@ -53,8 +53,10 @@ async function init() {
     )
   );
   
-  // Adjust radius, segments, and color (r, g, b, a) below:
-  let circleVertices = circleMaker(0.15, 72, 1, 0, 0, 1);
+  // Generate a rainbow sun with 200 pointillism dots
+  let circleVertices = circleMaker(0.15, 72, 100000);
+
+
 
   // Initialize PGA2D pose
   // The first four entries are the motor (rotation/translation),
@@ -81,7 +83,7 @@ async function init() {
   );
   
   // Set up rotation parameters
-  let angle = Math.PI / 100;     // how fast to rotate
+  let angle = Math.PI / 360;     // how fast to rotate
   let center = [0, 0];           // pivot point
   let dr = PGA2D.normaliozeMotor([
     Math.cos(angle / 2),
