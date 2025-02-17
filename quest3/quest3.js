@@ -30,8 +30,6 @@ import Renderer2D from './lib/Viz/2DRenderer.js';
 import Camera2D from './lib/Viz/2DCamera.js';
 import DynamicGrid from './lib/DSViz/CameraLineStrip2DAliveDeadObject.js';
 import TextOverlay from './lib/DSViz/StandardTextObject.js';
-import PGA2DMath from './lib/Math/PGA2D.js';
-import SceneObject2D from './lib/DSViz/Standard2DPGACameraSceneObject.js';
 
 async function initializeScene() {
   // Setup canvas
