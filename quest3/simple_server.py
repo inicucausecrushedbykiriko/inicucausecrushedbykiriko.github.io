@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<!-- Comments in HTML -->
-<!-- 
+"""
  * Copyright (c) 2025 SingChun LEE @ Bucknell University. CC BY-NC 4.0.
  * 
  * This code is provided mainly for educational purposes at Bucknell University.
@@ -21,21 +19,17 @@
  *  - No additional restrictions: You may not apply legal terms or technological 
  *                                measures that legally restrict others from doing
  *                                anything the license permits.
--->
-<html>
-  <head>
-    <title>Quest 3</title>
-    <!-- Note that some header tags don't need a close tag. They don't have content, called "void" tags. -->
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <!-- Import CSS uisng the link tag -->
-    <link rel="stylesheet" type="text/css" href="./style/assignment.css">
-    <!-- Webpage icon -->
-    <link rel="icon" href="./assets/cell.ico" type="image/x-icon">
-    <!-- Include the web app script -->
-    <script type="module" src="quest3-starter.js"></script>
-  </head>
-  <body>
-  </body>
-</html>
+"""
+
+import http.server
+import socketserver
+
+PORT = 8080
+
+Handler = http.server.SimpleHTTPRequestHandler
+Handler.extensions_map.update({
+  ".js" : "application/javascript",
+})
+
+httpd = socketserver.TCPServer(("", PORT), Handler)
+httpd.serve_forever()
