@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
 
-import SceneObject from "/lib/DSViz/SceneObject.js"
+import SceneObject from "/quest3/lib/DSViz/SceneObject.js"
 
 export default class LineStrip2DVertexObject extends SceneObject {
   constructor(device, canvasFormat, vertices) {

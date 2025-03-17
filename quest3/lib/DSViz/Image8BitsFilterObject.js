@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
 
-import ImageFilterObject from "/lib/DSViz/ImageFilterObject.js"
+import ImageFilterObject from "/quest3/lib/DSViz/ImageFilterObject.js"
 
 export default class Image8BitsFilterObject extends ImageFilterObject {
   async createShaders() {

@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
 
-import Standard2DPGAPosedVertexColorObject from "/lib/DSViz/Standard2DPGAPosedVertexColorObject.js"
+import Standard2DPGAPosedVertexColorObject from "/quest3/lib/DSViz/Standard2DPGAPosedVertexColorObject.js"
 
 export default class DemoTreeObject extends Standard2DPGAPosedVertexColorObject {
   constructor(device, canvasFormat, pose) {
