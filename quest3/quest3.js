@@ -26,143 +26,144 @@
 // Chrome & Edge 113+ : Enable Vulkan, Default ANGLE Vulkan, Vulkan from ANGLE, Unsafe WebGPU Support, and WebGPU Developer Features (if exsits)
 // Firefox Nightly: sudo snap install firefox --channel=latext/edge or download from https://www.mozilla.org/en-US/firefox/channel/desktop/
 
-import Renderer from '/quest3/lib/Viz/2DRenderer.js'
-import Camera from '/quest3/lib/Viz/2DCamera.js'
-import CameraLineStrip2DAliveDeadObject from '/quest3/lib/DSViz/CameraLineStrip2DAliveDeadObject.js'
-import StandardTextObject from '/quest3/lib/DSViz/StandardTextObject.js'
-import PGA2D from '/quest3/lib/Math/PGA2D.js'
-import Standard2DPGACameraSceneObject from '/quest3/lib/DSViz/Standard2DPGACameraSceneObject.js'
+import Renderer from '/quest3/lib/Viz/2DRenderer.js';
+import Camera from '/quest3/lib/Viz/2DCamera.js';
+import CameraLineStrip2DAliveDeadObject from '/quest3/lib/DSViz/CameraLineStrip2DAliveDeadObject.js';
+import StandardTextObject from '/quest3/lib/DSViz/StandardTextObject.js';
 
 async function init() {
-  // Create a canvas tag
   const canvasTag = document.createElement('canvas');
   canvasTag.id = "renderCanvas";
   document.body.appendChild(canvasTag);
-  // Create a 2d animated renderer
+
   const renderer = new Renderer(canvasTag);
   await renderer.init();
-  var vertices = new Float32Array([
-     // x, y
-     -0.5, -0.5,
+
+  const camera = new Camera();
+  const vertices = new Float32Array([
+    -0.5, -0.5,
      0.5, -0.5,
      0.5,  0.5,
-     -0.5, 0.5, 
-     -0.5, -0.5 // loop back to the first vertex
+    -0.5,  0.5,
+    -0.5, -0.5
   ]);
-  const camera = new Camera();
+
   const grid = new CameraLineStrip2DAliveDeadObject(renderer._device, renderer._canvasFormat, camera._pose, vertices);
   await renderer.appendSceneObject(grid);
-  // Add a movable colored quad
-  var pose = new Float32Array([1, 0, 0, 0, 0.025, 0.025]);
-  var quadVertices = new Float32Array([
-     // x, y, r, g, b, a
-     -1, -1, 1, 0, 0, 1,
-     1, -1, 0, 1, 0, 1,
-     -1, 1, 0, 0, 1, 1,
-     1, 1, 1, 0, 1, 1,
-     -1, 1, 0, 0, 1, 1,
-     1, -1, 0, 1, 0, 1
-  ]);
-  const quad = new Standard2DPGACameraSceneObject(renderer._device, renderer._canvasFormat, camera._pose, quadVertices, pose);
-  await renderer.appendSceneObject(quad);
-  let fps = '??';
-  var fpsText = new StandardTextObject('fps: ' + fps);
-  // keyboard interaction
-  var movespeed = 0.05;
+
+  // FPS text (top-left)
+  let fpsText = new StandardTextObject('fps: ??');
+
+  // Controls text (offset lower to prevent overlap)
+  let helpText = new StandardTextObject(
+    "Keyboard Controls:\n" +
+    "WASD / Arrows - Move camera\n" +
+    "Q / E - Zoom in/out\n" +
+    "P - Pause  |  R - Reset\n" +
+    "F - Toggle FPS\n\n" +
+    "PS5 Gamepad Controls:\n" +
+    "Left Stick - Move camera\n" +
+    "L1 / R1 - Zoom in/out\n" +
+    "Triangle - Reset\n" +
+    "Options - Pause/Resume"
+  );
+  helpText._textCanvas.style.top = '80px'; // move down below FPS
+
+  // Pause logic
+  let isPaused = false;
+  const originalCompute = grid.compute.bind(grid);
+  grid.compute = (pass) => {
+    if (!isPaused) originalCompute(pass);
+  };
+
+  const moveSpeed = 0.05;
+  const zoomSpeed = 0.05;
+
+  // Keyboard controls
   window.addEventListener("keydown", (e) => {
     switch (e.key) {
-      case 'ArrowUp': case 'w': case 'W':
-        camera.moveUp(movespeed);
-        grid.updateCameraPose();
-        quad.updateCameraPose();
-        break;
-      case 'ArrowDown': case 's': case 'S':   
-        camera.moveDown(movespeed);
-        grid.updateCameraPose();     
-        quad.updateCameraPose();
-        break;
-      case 'ArrowLeft': case 'a': case 'A':  
-        camera.moveLeft(movespeed);
-        grid.updateCameraPose();
-        quad.updateCameraPose();
-        break;
-      case 'ArrowRight': case 'd': case 'D': 
-        camera.moveRight(movespeed);
-        grid.updateCameraPose();    
-        quad.updateCameraPose();        
-        break;
-      case 'q': case 'Q':  
-        camera.zoomIn();
-        grid.updateCameraPose();    
-        quad.updateCameraPose();        
-        break;
+      case 'w': case 'W': case 'ArrowUp':
+        camera.moveUp(moveSpeed); break;
+      case 's': case 'S': case 'ArrowDown':
+        camera.moveDown(moveSpeed); break;
+      case 'a': case 'A': case 'ArrowLeft':
+        camera.moveLeft(moveSpeed); break;
+      case 'd': case 'D': case 'ArrowRight':
+        camera.moveRight(moveSpeed); break;
+      case 'q': case 'Q':
+        camera.zoomIn(); break;
       case 'e': case 'E':
-        camera.zoomOut();
-        grid.updateCameraPose();  
-        quad.updateCameraPose();
-        break;
-      case 'f': case 'F': fpsText.toggleVisibility(); break;
+        camera.zoomOut(); break;
+      case 'f': case 'F':
+        fpsText.toggleVisibility(); return;
+      case 'p': case 'P':
+        isPaused = !isPaused;
+        console.log(`Simulation ${isPaused ? "paused" : "resumed"}`);
+        return;
+      case 'r': case 'R':
+        grid.randomizeCells();
+        grid.refreshGPUCellState();
+        console.log("Simulation reset.");
+        return;
     }
+    grid.updateCameraPose();
   });
-  // mouse interactions
-  let isDragging = false;
-  let oldP = [0, 0];
-  canvasTag.addEventListener('mousedown', (e) => {
-    var mouseX = (e.clientX / window.innerWidth) * 2 - 1;
-    var mouseY = (-e.clientY / window.innerHeight) * 2 + 1;
-    mouseX /= camera._pose[4];
-    mouseY /= camera._pose[5];
-    let p = PGA2D.applyMotorToPoint([mouseX, mouseY], [camera._pose[0], camera._pose[1], camera._pose[2], camera._pose[3]]);
-    oldP = [...p];
-    p[0] /= pose[4];
-    p[1] /= pose[5];
-    let sp = PGA2D.applyMotorToPoint(p, PGA2D.reverse([pose[0], pose[1], pose[2], pose[3]]));
-    if (-1 <= sp[0] && sp[0] <= 1 && -1 <= sp[1] && sp[1] <= 1) {
-      isDragging = true;
+
+  // Gamepad logic
+  function handleGamepadInput() {
+    const gamepads = navigator.getGamepads();
+    if (!gamepads) return;
+
+    const gp = gamepads[0];
+    if (!gp) return;
+
+    const lx = gp.axes[0]; // left stick horizontal
+    const ly = gp.axes[1]; // left stick vertical
+
+    // Dead zone
+    if (Math.abs(lx) > 0.1) {
+      if (lx < 0) camera.moveLeft(moveSpeed * Math.abs(lx));
+      else camera.moveRight(moveSpeed * Math.abs(lx));
     }
-  });
-  canvasTag.addEventListener('mousemove', (e) => {
-    var mouseX = (e.clientX / window.innerWidth) * 2 - 1;
-    var mouseY = (-e.clientY / window.innerHeight) * 2 + 1;
-    mouseX /= camera._pose[4];
-    mouseY /= camera._pose[5];
-    let p = PGA2D.applyMotorToPoint([mouseX, mouseY], [camera._pose[0], camera._pose[1], camera._pose[2], camera._pose[3]]);
-    let halfLength = 1; // half cell length
-    let cellLength = halfLength * 2; // full cell length
-    let u = Math.floor((p[0] + halfLength) / cellLength * 10);
-    let v = Math.floor((p[1] + halfLength) / cellLength * 10);
-    if (u >= 0 && u < 10 && v >= 0 && v < 10) {
-      let offsetX = - halfLength + u / 10 * cellLength + cellLength / 10 * 0.5;
-      let offsetY = - halfLength + v / 10 * cellLength + cellLength / 10 * 0.5;
-      if (-0.5 / 10 + offsetX <= p[0] && p[0] <= 0.5 / 10 + offsetX && -0.5 / 10 + offsetY <= p[1] && p[1] <= 0.5 / 10 + offsetY) {
-        console.log(`in cell (${u}, ${v})`);
-      }
+    if (Math.abs(ly) > 0.1) {
+      if (ly < 0) camera.moveUp(moveSpeed * Math.abs(ly));
+      else camera.moveDown(moveSpeed * Math.abs(ly));
     }
-    if (isDragging) {
-      let diff = Math.sqrt(Math.pow(p[0] - oldP[0], 2) + Math.pow(p[1] - oldP[1], 2));
-      if (diff > 0.001) { // a dirty flag spell
-        let dt = PGA2D.createTranslator((p[0] - oldP[0]) / pose[4], (p[1] - oldP[1]) / pose[5]); // compute changes in the model space
-        let newmotor = PGA2D.normaliozeMotor(PGA2D.geometricProduct(dt, [pose[0], pose[1], pose[2], pose[3]]));
-        pose[0] = newmotor[0];
-        pose[1] = newmotor[1];
-        pose[2] = newmotor[2];
-        pose[3] = newmotor[3];
-        quad.updateGeometry();
-        oldP = p;
-      }
+
+    // L1 (button 4) to zoom in, R1 (button 5) to zoom out
+    if (gp.buttons[4].pressed) camera.zoomIn();
+    if (gp.buttons[5].pressed) camera.zoomOut();
+
+    // Triangle (button 3) to reset
+    if (gp.buttons[3].pressed && !handleGamepadInput._resetPressed) {
+      grid.randomizeCells();
+      grid.refreshGPUCellState();
+      console.log("Gamepad: Simulation reset.");
     }
-  });
-  canvasTag.addEventListener('mouseup', (e) => {
-    isDragging = false;
-  });
-  // run animation at 60 fps
-  var frameCnt = 0;
-  var tgtFPS = 60;
-  var secPerFrame = 1. / tgtFPS;
-  var frameInterval = secPerFrame * 1000;
-  var lastCalled;
-  let renderFrame = () => {
-    let elapsed = Date.now() - lastCalled;
+    handleGamepadInput._resetPressed = gp.buttons[3].pressed;
+
+    // Options button (button 9) to pause/resume
+    if (gp.buttons[9].pressed && !handleGamepadInput._pausePressed) {
+      isPaused = !isPaused;
+      console.log(`Gamepad: Simulation ${isPaused ? "paused" : "resumed"}`);
+    }
+    handleGamepadInput._pausePressed = gp.buttons[9].pressed;
+
+    grid.updateCameraPose();
+  }
+  handleGamepadInput._pausePressed = false;
+  handleGamepadInput._resetPressed = false;
+
+  // Animation loop
+  let frameCnt = 0;
+  const tgtFPS = 60;
+  const frameInterval = 1000 / tgtFPS;
+  let lastCalled = Date.now();
+
+  const renderFrame = () => {
+    handleGamepadInput(); // poll gamepad every frame
+
+    const elapsed = Date.now() - lastCalled;
     if (elapsed > frameInterval) {
       ++frameCnt;
       lastCalled = Date.now() - (elapsed % frameInterval);
@@ -170,20 +171,17 @@ async function init() {
     }
     requestAnimationFrame(renderFrame);
   };
-  lastCalled = Date.now();
+
   renderFrame();
-  setInterval(() => { 
+  setInterval(() => {
     fpsText.updateText('fps: ' + frameCnt);
     frameCnt = 0;
-  }, 1000); // call every 1000 ms
-  return renderer;
+  }, 1000);
 }
 
-init().then( ret => {
-  console.log(ret);
-}).catch( error => {
+init().catch(error => {
   const pTag = document.createElement('p');
   pTag.innerHTML = navigator.userAgent + "</br>" + error.message;
   document.body.appendChild(pTag);
-  document.getElementById("renderCanvas").remove();
+  document.getElementById("renderCanvas")?.remove();
 });
