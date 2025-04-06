@@ -33,6 +33,8 @@ export default class CameraLineStrip2DAliveDeadObject extends SceneObject {
     this._cellStatus = new Uint32Array(this._width * this._height);
     this._cellStateBuffers = [];
     this._step = 0;
+    this._dragging = false;
+    this._dragIdx = -1;
   }
 
   async init() {
@@ -65,7 +67,7 @@ export default class CameraLineStrip2DAliveDeadObject extends SceneObject {
     });
     this._device.queue.writeBuffer(this._cameraPoseBuffer, 0, this._cameraPose);
 
-    this.randomizeCells();  // <- Important: do this before buffers
+    this.randomizeCells();
     this._cellStateBuffers = [
       this._device.createBuffer({
         label: "Grid status Buffer 1",
@@ -116,13 +118,45 @@ export default class CameraLineStrip2DAliveDeadObject extends SceneObject {
   toggleCell(x, y) {
     if (x < 0 || x >= this._width || y < 0 || y >= this._height) return;
     const idx = y * this._width + x;
-    this._cellStatus[idx] ^= 1;
-    const readBufIndex = this._step % 2;
-    this._device.queue.writeBuffer(
-      this._cellStateBuffers[readBufIndex],
-      idx * 4,
-      this._cellStatus.subarray(idx, idx + 1)
-    );
+    if (this._cellStatus[idx] !== 3) {
+      this._cellStatus[idx] ^= 1;
+      const readBufIndex = this._step % 2;
+      this._device.queue.writeBuffer(
+        this._cellStateBuffers[readBufIndex],
+        idx * 4,
+        this._cellStatus.subarray(idx, idx + 1)
+      );
+    }
+  }
+
+  startDragging(x, y) {
+    const idx = y * this._width + x;
+    if (this._cellStatus[idx] === 3) {
+      this._dragging = true;
+      this._dragIdx = idx;
+    }
+  }
+
+  dragTo(x, y) {
+    if (!this._dragging) return;
+    if (x < 0 || x >= this._width || y < 0 || y >= this._height) return;
+    const newIdx = y * this._width + x;
+    if (this._dragIdx !== -1 && this._dragIdx !== newIdx) {
+      this._cellStatus[this._dragIdx] = 0;
+      this._cellStatus[newIdx] = 3;
+      this._dragIdx = newIdx;
+      const readBufIndex = this._step % 2;
+      this._device.queue.writeBuffer(
+        this._cellStateBuffers[readBufIndex],
+        0,
+        this._cellStatus
+      );
+    }
+  }
+
+  endDragging() {
+    this._dragging = false;
+    this._dragIdx = -1;
   }
 
   updateCameraPose() {
