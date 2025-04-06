@@ -1,11 +1,11 @@
-import FilteredRenderer from '/lib/Viz/2DFilteredRenderer.js';
-import Standard2DFullScreenObject from '/lib/DSViz/Standard2DFullScreenObject.js';
-import Standard2DPGAPosedVertexColorObject from '/lib/DSViz/Standard2DPGAPosedVertexColorObject.js';
-import PGA2D from '/lib/Math/PGA2D.js';
+import FilteredRenderer from '/quest4/lib/Viz/2DFilteredRenderer.js';
+import Standard2DFullScreenObject from '/quest4/lib/DSViz/Standard2DFullScreenObject.js';
+import Standard2DPGAPosedVertexColorObject from '/quest4/lib/DSViz/Standard2DPGAPosedVertexColorObject.js';
+import PGA2D from '/quest4/lib/Math/PGA2D.js';
 import circle from './circle.js'; // Importing the circle generator
 
-import AnimatedOrbitObject from '/lib/DSViz/AnimatedOrbitObject.js';
-import AnimatedSpaceshipObject from '/lib/DSViz/AnimatedSpaceshipObject.js';
+import AnimatedOrbitObject from '/quest4/lib/DSViz/AnimatedOrbitObject.js';
+import AnimatedSpaceshipObject from '/quest4/lib/DSViz/AnimatedSpaceshipObject.js';
 
 async function init() {
   // Create canvas
