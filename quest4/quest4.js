@@ -31,68 +31,64 @@ import ParticleSystemObject from '/quest4/lib/DSViz/ParticleSystemObject.js';
 import StandardTextObject from '/quest4/lib/DSViz/StandardTextObject.js';
 
 async function init() {
-  // Create a canvas tag
+  // Create the canvas
   const canvasTag = document.createElement('canvas');
   canvasTag.id = "renderCanvas";
   document.body.appendChild(canvasTag);
 
-  // Create a 2D renderer
+  // Create and init the 2D renderer
   const renderer = new Renderer(canvasTag);
   await renderer.init();
 
-  // Create and append our ParticleSystemObject (4096 is a nice default)
-  const particles = new ParticleSystemObject(renderer._device, renderer._canvasFormat, 4096);
+  // Build a large (20k) system in "fireAndSmoke" mode
+  const numParticles = 20000; // Over 10,000 for real-time
+  const particles = new ParticleSystemObject(renderer._device, renderer._canvasFormat, numParticles, true);
   await renderer.appendSceneObject(particles);
 
-  // Text overlay for FPS
+  // Basic FPS overlay
   let fps = '??';
   const fpsText = new StandardTextObject('fps: ' + fps);
 
-  // A separate text box with usage instructions
+  // Additional instructions
   const infoText = new StandardTextObject(
     "Controls:\n" +
     "W => Decrease gravity\n" +
     "S => Increase gravity\n" +
     "Left-click => Attract to mouse\n" +
-    "R => Reset particles\n" +
+    "R => Reset\n" +
     "F => Toggle FPS overlay",
-    2, // spacing between lines (if desired)
-    '16px Arial' // slightly smaller/larger font if you want
+    2,
+    '16px Arial'
   );
-  // Shift it down from the fps overlay a bit
   infoText._textCanvas.style.top = '80px';
   infoText._textCanvas.style.left = '10px';
 
-  // Keyboard shortcuts
+  // Keyboard
   window.addEventListener("keydown", (e) => {
     switch (e.key) {
       case 'r':
       case 'R':
-        // Respawn all particles on CPU, then update GPU
         particles.resetParticles();
         console.log("Particles reset!");
         break;
       case 'f':
       case 'F':
-        // Toggle FPS overlay
         fpsText.toggleVisibility();
         break;
       case 'w':
       case 'W':
-        // Lower gravity by 0.1
         particles.modifyGravity(-0.1);
         console.log("Gravity scale decreased!");
         break;
       case 's':
       case 'S':
-        // Increase gravity by 0.1
         particles.modifyGravity(+0.1);
         console.log("Gravity scale increased!");
         break;
     }
   });
 
-  // Mouse interaction => hold left-click => attract particles to mouse
+  // Mouse => hold left-click => attract
   canvasTag.addEventListener('mousedown', (ev) => {
     if (ev.button === 0) {
       particles.setMouseActive(true);
@@ -107,16 +103,16 @@ async function init() {
     const rect = canvasTag.getBoundingClientRect();
     const x = (ev.clientX - rect.left) / rect.width;
     const y = (ev.clientY - rect.top) / rect.height;
-    // Convert [0..1] => [-1..1], [0..1] => [1..-1]
+    // Convert [0..1] => [-1..1], and Y => flips
     const nx = x * 2.0 - 1.0;
     const ny = -(y * 2.0 - 1.0);
     particles.setMousePosition(nx, ny);
   });
 
-  // Render at ~60 fps
+  // Simple ~60fps loop
   let frameCnt = 0;
   const tgtFPS = 60;
-  const frameInterval = 1000 / tgtFPS; 
+  const frameInterval = 1000 / tgtFPS;
   let lastCalled = Date.now();
 
   function renderFrame() {
@@ -130,7 +126,7 @@ async function init() {
   }
   renderFrame();
 
-  // Update the FPS overlay every 1s
+  // Update FPS every 1s
   setInterval(() => {
     fpsText.updateText('fps: ' + frameCnt);
     frameCnt = 0;
@@ -142,9 +138,9 @@ async function init() {
 init().then((ret) => {
   console.log("Renderer initialized:", ret);
 }).catch((error) => {
-  const pTag = document.createElement('p');
-  pTag.innerHTML = navigator.userAgent + "</br>" + error.message;
-  document.body.appendChild(pTag);
+  const msg = document.createElement('p');
+  msg.innerHTML = navigator.userAgent + "</br>" + error.message;
+  document.body.appendChild(msg);
   const canvas = document.getElementById("renderCanvas");
   if (canvas) canvas.remove();
 });

@@ -23,101 +23,154 @@
 import SceneObject from '/quest4/lib/DSViz/SceneObject.js'
 
 export default class ParticleSystemObject extends SceneObject {
-  constructor(device, canvasFormat, numParticles = 4096) {
+  constructor(device, canvasFormat, numParticles = 10000, fireAndSmoke = false) {
     super(device, canvasFormat);
     this._numParticles = numParticles;
     this._step = 0;
 
-    // param[0] = gravityScale
-    // param[1] = mouseX
-    // param[2] = mouseY
-    // param[3] = mouseActive
+    // param buffer: [ gravityScale, mouseX, mouseY, mouseActive ]
     this._param = new Float32Array([1.0, 0.0, 0.0, 0.0]);
+
+    this._fireAndSmoke = fireAndSmoke; // if true => we do negative life for smoke
   }
 
-  // Called by the renderer once the object is appended
   async createGeometry() {
     await this.createParticleGeometry();
+    await this.createRadialTexture(); // for glow or smoke
   }
-  
-  // 1) Allocate CPU arrays & GPU ping-pong buffers
+
+  // We store 8 floats per particle: x,y, ix,iy, vx,vy, age, life
+  // If life < 0 => "smoke", else => colored spark
   async createParticleGeometry() {
-    // Each particle has 8 floats => [ x, y, ix, iy, vx, vy, age, life ]
     this._particles = new Float32Array(this._numParticles * 8);
 
-    // Create two GPU buffers, each big enough for all particles
     this._particleBuffers = [
       this._device.createBuffer({
-        label: "Particle Buffer A " + this.getName(),
-        size:  this._particles.byteLength,
+        label: "Particle Buf 0",
+        size: this._particles.byteLength,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
       }),
       this._device.createBuffer({
-        label: "Particle Buffer B " + this.getName(),
-        size:  this._particles.byteLength,
+        label: "Particle Buf 1",
+        size: this._particles.byteLength,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
       })
     ];
 
-    // Also create a small uniform buffer for param data
+    // param uniform
     this._paramBuffer = this._device.createBuffer({
-      label: "Param Buffer " + this.getName(),
-      size:  this._param.byteLength,
+      label: "Param Buf",
+      size: this._param.byteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     });
 
-    // Initialize data on CPU, then copy to GPU buffer
+    // We'll render each particle as a small quad (two triangles)
+    const quadData = new Float32Array([
+      // x,   y,  u, v
+      0,0,   0,0,
+      1,0,   1,0,
+      0,1,   0,1,
+
+      1,0,   1,0,
+      1,1,   1,1,
+      0,1,   0,1
+    ]);
+    this._vertexCount = 6;
+    this._quadBuffer = this._device.createBuffer({
+      label: "Quad Verts",
+      size: quadData.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+    });
+    this._device.queue.writeBuffer(this._quadBuffer, 0, quadData);
+
     this.resetParticles();
   }
 
-  // 2) CPU helper to randomize positions, velocities, lifespans, then write to "in" buffer
-  resetParticles() {
-    for (let i = 0; i < this._numParticles; ++i) {
-      const offset = i * 8;
+  // Make a small radial gradient texture => for glow or smoke effect
+  async createRadialTexture() {
+    const size = 32;
+    const channelCount = 4;
+    const data = new Uint8Array(size * size * channelCount);
 
-      // random pos in [-1,1]
-      const rx = Math.random() * 2 - 1;
-      const ry = Math.random() * 2 - 1;
-
-      // (x, y)
-      this._particles[offset + 0] = rx;
-      this._particles[offset + 1] = ry;
-      // (ix, iy) for respawning at initial location
-      this._particles[offset + 2] = rx;
-      this._particles[offset + 3] = ry;
-
-      // velocity
-      this._particles[offset + 4] = (Math.random() - 0.5) * 0.01; // vx
-      this._particles[offset + 5] = (Math.random() - 0.5) * 0.01; // vy
-
-      // age = 0 initially
-      this._particles[offset + 6] = 0.0; 
-      // life = random between 60..300 frames
-      this._particles[offset + 7] = Math.floor(Math.random() * 120.0 + 30.0); 
+    for (let j = 0; j < size; j++) {
+      for (let i = 0; i < size; i++) {
+        const idx = (j*size + i) * channelCount;
+        let dx = i - size/2;
+        let dy = j - size/2;
+        let dist = Math.sqrt(dx*dx + dy*dy) / (size/2);
+        if (dist > 1.0) dist = 1.0;
+        let alpha = 1.0 - dist;
+        data[idx+0] = 255;
+        data[idx+1] = 255;
+        data[idx+2] = 255;
+        data[idx+3] = Math.floor(alpha * 255);
+      }
     }
 
-    this._step = 0;
-    // Write CPU array into the first buffer (the "in" buffer)
-    this._device.queue.writeBuffer(
-      this._particleBuffers[0],
-      0,
-      this._particles
+    this._radialTex = this._device.createTexture({
+      label: "Radial Tex",
+      size: { width: size, height: size },
+      format: "rgba8unorm",
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+    });
+    this._device.queue.writeTexture(
+      { texture: this._radialTex },
+      data,
+      { bytesPerRow: size*channelCount },
+      { width: size, height: size }
     );
+    this._radialSampler = this._device.createSampler({
+      label: "Radial Sampler",
+      magFilter: "linear",
+      minFilter: "linear"
+    });
   }
 
-  // Called each frame before rendering (if needed)
+  // CPU-based reset => ~30% negative => smoke
+  resetParticles() {
+    for (let i = 0; i < this._numParticles; i++) {
+      let off = i*8;
+      let rx = Math.random()*2 - 1;
+      let ry = Math.random()*2 - 1;
+      // position
+      this._particles[off+0] = rx;
+      this._particles[off+1] = ry;
+      // init pos
+      this._particles[off+2] = rx;
+      this._particles[off+3] = ry;
+
+      // smaller velocity => slower
+      this._particles[off+4] = (Math.random()-0.5)*0.003;
+      this._particles[off+5] = (Math.random()-0.5)*0.003;
+
+      // age=0
+      this._particles[off+6] = 0.0;
+
+      // if fireAndSmoke => ~30% negative => smoke
+      let isSmoke = false;
+      if (this._fireAndSmoke && Math.random() < 0.3) {
+        isSmoke = true;
+      }
+      let lifeVal = Math.floor(Math.random()*240 + 60); // 60..300
+      if (isSmoke) lifeVal = -lifeVal; // store negative => smoke
+      this._particles[off+7] = lifeVal;
+    }
+    this._step=0;
+    this._device.queue.writeBuffer(this._particleBuffers[0],0, this._particles);
+  }
+
   updateGeometry() {}
 
-  // 3) Create bind group layout
   async createShaders() {
-    const shaderCode = await this.loadShader("/quest4/shaders/particles.wgsl");
+    // specialized WGSL => no wind, non-linear fade, smoke vs color
+    const code = await this.loadShader("/quest4/shaders/particles-fireAndSmoke.wgsl");
     this._shaderModule = this._device.createShaderModule({
-      label: "Particles Shader " + this.getName(),
-      code: shaderCode
+      label: "Particles FireAndSmoke",
+      code
     });
 
     this._bindGroupLayout = this._device.createBindGroupLayout({
-      label: "Particle BGL " + this.getName(),
+      label: "Particle BGL",
       entries: [
         {
           binding: 0,
@@ -133,45 +186,76 @@ export default class ParticleSystemObject extends SceneObject {
           binding: 2,
           visibility: GPUShaderStage.COMPUTE,
           buffer: { type: "uniform" }
+        },
+        {
+          binding: 3,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {}
+        },
+        {
+          binding: 4,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {}
         }
       ]
     });
 
     this._pipelineLayout = this._device.createPipelineLayout({
-      label: "Particles Pipeline Layout",
-      bindGroupLayouts: [this._bindGroupLayout]
+      label: "Particle Layout",
+      bindGroupLayouts: [ this._bindGroupLayout ]
     });
   }
 
-  // 4) Create the render pipeline (vertex+fragment)
   async createRenderPipeline() {
+    // We'll do alpha blending => so smoke can overlay
     this._particlePipeline = this._device.createRenderPipeline({
-      label: "Particles Render Pipeline " + this.getName(),
+      label: "Particle Render Pipeline",
       layout: this._pipelineLayout,
       vertex: {
         module: this._shaderModule,
-        entryPoint: "vertexMain"
+        entryPoint: "vertexMain",
+        buffers: [{
+          arrayStride: 4*Float32Array.BYTES_PER_ELEMENT, // x,y,u,v
+          attributes: [
+            { shaderLocation: 0, format: "float32x2", offset: 0 },
+            { shaderLocation: 1, format: "float32x2", offset: 2*4 }
+          ]
+        }]
       },
       fragment: {
         module: this._shaderModule,
         entryPoint: "fragmentMain",
-        targets: [{ format: this._canvasFormat }]
+        targets: [{
+          format: this._canvasFormat,
+          blend: {
+            color: {
+              srcFactor: 'one',
+              dstFactor: 'one-minus-src-alpha',
+              operation: 'add'
+            },
+            alpha: {
+              srcFactor: 'one',
+              dstFactor: 'one-minus-src-alpha',
+              operation: 'add'
+            }
+          }
+        }]
       },
-      primitive: {
-        topology: "line-strip"
-      }
+      primitive: { topology: "triangle-list" }
     });
 
-    // ping-pong bind groups: 
-    // step even => in=buf[0], out=buf[1]
-    // step odd => in=buf[1], out=buf[0]
+    let texView = this._radialTex.createView();
+    let sampler = this._radialSampler;
+
     this._bindGroups = [
       this._device.createBindGroup({
         layout: this._particlePipeline.getBindGroupLayout(0),
         entries: [
           { binding: 0, resource: { buffer: this._particleBuffers[0] } },
           { binding: 1, resource: { buffer: this._particleBuffers[1] } },
-          { binding: 2, resource: { buffer: this._paramBuffer } }
+          { binding: 2, resource: { buffer: this._paramBuffer } },
+          { binding: 3, resource: texView },
+          { binding: 4, resource: sampler }
         ]
       }),
       this._device.createBindGroup({
@@ -179,23 +263,24 @@ export default class ParticleSystemObject extends SceneObject {
         entries: [
           { binding: 0, resource: { buffer: this._particleBuffers[1] } },
           { binding: 1, resource: { buffer: this._particleBuffers[0] } },
-          { binding: 2, resource: { buffer: this._paramBuffer } }
+          { binding: 2, resource: { buffer: this._paramBuffer } },
+          { binding: 3, resource: texView },
+          { binding: 4, resource: sampler }
         ]
       })
     ];
   }
 
-  // 5) Called each frame: do the draw call
   render(pass) {
     pass.setPipeline(this._particlePipeline);
     pass.setBindGroup(0, this._bindGroups[this._step % 2]);
-    pass.draw(128, this._numParticles);
+    pass.setVertexBuffer(0, this._quadBuffer);
+    pass.draw(this._vertexCount, this._numParticles);
   }
 
-  // 6) Create the compute pipeline
   async createComputePipeline() {
     this._computePipeline = this._device.createComputePipeline({
-      label: "Particles Compute Pipeline " + this.getName(),
+      label: "Particle Compute",
       layout: this._pipelineLayout,
       compute: {
         module: this._shaderModule,
@@ -204,7 +289,6 @@ export default class ParticleSystemObject extends SceneObject {
     });
   }
 
-  // 7) Called by the renderer each frame: do the compute pass
   compute(pass) {
     pass.setPipeline(this._computePipeline);
     pass.setBindGroup(0, this._bindGroups[this._step % 2]);
@@ -212,26 +296,19 @@ export default class ParticleSystemObject extends SceneObject {
     this._step++;
   }
 
-  // Additional methods to control param buffer:
+  // Param editing
   modifyGravity(delta) {
-    // param[0] = gravityScale
     this._param[0] += delta;
-    if (this._param[0] < 0.0) {
-      this._param[0] = 0.0; // don't let it go negative
-    }
+    if (this._param[0]<0) this._param[0] = 0;
     this._device.queue.writeBuffer(this._paramBuffer, 0, this._param);
   }
-
   setMousePosition(nx, ny) {
-    // param[1], param[2] = mouseX, mouseY
     this._param[1] = nx;
     this._param[2] = ny;
     this._device.queue.writeBuffer(this._paramBuffer, 0, this._param);
   }
-
-  setMouseActive(isActive) {
-    // param[3] = mouseActive
-    this._param[3] = isActive ? 1.0 : 0.0;
+  setMouseActive(on) {
+    this._param[3] = on?1:0;
     this._device.queue.writeBuffer(this._paramBuffer, 0, this._param);
   }
 }
