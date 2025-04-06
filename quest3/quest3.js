@@ -30,6 +30,7 @@ import Renderer from '/quest3/lib/Viz/2DRenderer.js';
 import Camera from '/quest3/lib/Viz/2DCamera.js';
 import CameraLineStrip2DAliveDeadObject from '/quest3/lib/DSViz/CameraLineStrip2DAliveDeadObject.js';
 import StandardTextObject from '/quest3/lib/DSViz/StandardTextObject.js';
+import PGA2D from '/quest3/lib/Math/PGA2D.js';
 
 async function init() {
   const canvasTag = document.createElement('canvas');
@@ -57,35 +58,33 @@ async function init() {
   await grid.init();
   await renderer.appendSceneObject(grid);
 
-  // FPS text (top-left)
   let fpsText = new StandardTextObject('fps: ??');
-
-  // Controls text (offset lower to prevent overlap)
   let helpText = new StandardTextObject(
     "Keyboard Controls:\n" +
     "WASD / Arrows - Move camera\n" +
     "Q / E - Zoom in/out\n" +
     "P - Pause  |  R - Reset\n" +
-    "F - Toggle FPS\n\n" +
+    "F - Toggle FPS\n" +
+    "1 / 2 - Speed up/down\n" +
+    "Use mouse to toggle cell under cursor\n\n" +
     "PS5 Gamepad Controls:\n" +
     "Left Stick - Move camera\n" +
     "L1 / R1 - Zoom in/out\n" +
+    "L2 / R2 - Speed up/down\n" +
     "Triangle - Reset\n" +
     "Options - Pause/Resume"
   );
-  helpText._textCanvas.style.top = '80px'; // move down below FPS
+  helpText._textCanvas.style.top = '80px';
 
-  // Pause logic
   let isPaused = false;
+  let computeInterval = 1;
   const originalCompute = grid.compute.bind(grid);
   grid.compute = (pass) => {
     if (!isPaused) originalCompute(pass);
   };
 
   const moveSpeed = 0.05;
-  const zoomSpeed = 0.05;
 
-  // Keyboard controls
   window.addEventListener("keydown", (e) => {
     switch (e.key) {
       case 'w': case 'W': case 'ArrowUp':
@@ -111,11 +110,18 @@ async function init() {
         grid.refreshGPUCellState();
         console.log("Simulation reset.");
         return;
+      case '1':
+        computeInterval = Math.min(10, computeInterval + 0.25);
+        console.log(`Simulation speed: ${computeInterval}x`);
+        return;
+      case '2':
+        computeInterval = Math.max(0.1, computeInterval - 0.25);
+        console.log(`Simulation speed: ${computeInterval}x`);
+        return;
     }
     grid.updateCameraPose();
   });
 
-  // Gamepad logic
   function handleGamepadInput() {
     const gamepads = navigator.getGamepads();
     if (!gamepads) return;
@@ -123,10 +129,9 @@ async function init() {
     const gp = gamepads[0];
     if (!gp) return;
 
-    const lx = gp.axes[0]; // left stick horizontal
-    const ly = gp.axes[1]; // left stick vertical
+    const lx = gp.axes[0];
+    const ly = gp.axes[1];
 
-    // Dead zone
     if (Math.abs(lx) > 0.1) {
       if (lx < 0) camera.moveLeft(moveSpeed * Math.abs(lx));
       else camera.moveRight(moveSpeed * Math.abs(lx));
@@ -136,11 +141,9 @@ async function init() {
       else camera.moveDown(moveSpeed * Math.abs(ly));
     }
 
-    // L1 (button 4) to zoom in, R1 (button 5) to zoom out
     if (gp.buttons[4].pressed) camera.zoomIn();
     if (gp.buttons[5].pressed) camera.zoomOut();
 
-    // Triangle (button 3) to reset
     if (gp.buttons[3].pressed && !handleGamepadInput._resetPressed) {
       grid.randomizeCells();
       grid.refreshGPUCellState();
@@ -148,32 +151,78 @@ async function init() {
     }
     handleGamepadInput._resetPressed = gp.buttons[3].pressed;
 
-    // Options button (button 9) to pause/resume
     if (gp.buttons[9].pressed && !handleGamepadInput._pausePressed) {
       isPaused = !isPaused;
       console.log(`Gamepad: Simulation ${isPaused ? "paused" : "resumed"}`);
     }
     handleGamepadInput._pausePressed = gp.buttons[9].pressed;
 
+    if (gp.buttons[6].pressed && !handleGamepadInput._l2Pressed) {
+      computeInterval = Math.min(10, computeInterval + 0.25);
+      console.log(`Gamepad: Simulation speed: ${computeInterval}x`);
+    }
+    handleGamepadInput._l2Pressed = gp.buttons[6].pressed;
+
+    if (gp.buttons[7].pressed && !handleGamepadInput._r2Pressed) {
+      computeInterval = Math.max(0.1, computeInterval - 0.25);
+      console.log(`Gamepad: Simulation speed: ${computeInterval}x`);
+    }
+    handleGamepadInput._r2Pressed = gp.buttons[7].pressed;
+
     grid.updateCameraPose();
   }
   handleGamepadInput._pausePressed = false;
   handleGamepadInput._resetPressed = false;
+  handleGamepadInput._l2Pressed = false;
+  handleGamepadInput._r2Pressed = false;
 
-  // Animation loop
+  // 🖱 Mouse interaction: toggle cell under cursor
+  canvasTag.addEventListener("mousedown", (e) => {
+    const rect = canvasTag.getBoundingClientRect();
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+
+    const normalizedX = (canvasX / canvasTag.width) * 2 - 1;
+    const normalizedY = -((canvasY / canvasTag.height) * 2 - 1);
+
+    const scaleX = normalizedX / camera._pose[4];
+    const scaleY = normalizedY / camera._pose[5];
+
+    const world = PGA2D.applyMotorToPoint(
+      [scaleX, scaleY],
+      [camera._pose[0], camera._pose[1], camera._pose[2], camera._pose[3]]
+    );
+
+    const gridX = Math.floor((world[0] + 1) / 2 * 2048);
+    const gridY = Math.floor((world[1] + 1) / 2 * 2048);
+
+    if (gridX >= 0 && gridX < 2048 && gridY >= 0 && gridY < 2048) {
+      grid.toggleCell(gridX, gridY);
+    }
+  });
+
   let frameCnt = 0;
   const tgtFPS = 60;
   const frameInterval = 1000 / tgtFPS;
   let lastCalled = Date.now();
 
   const renderFrame = () => {
-    handleGamepadInput(); // poll gamepad every frame
+    handleGamepadInput();
 
     const elapsed = Date.now() - lastCalled;
     if (elapsed > frameInterval) {
       ++frameCnt;
       lastCalled = Date.now() - (elapsed % frameInterval);
-      renderer.render();
+
+      if (computeInterval >= 1) {
+        for (let i = 0; i < computeInterval; i++) {
+          renderer.render();
+        }
+      } else {
+        if ((frameCnt % Math.round(1 / computeInterval)) === 0) {
+          renderer.render();
+        }
+      }
     }
     requestAnimationFrame(renderFrame);
   };

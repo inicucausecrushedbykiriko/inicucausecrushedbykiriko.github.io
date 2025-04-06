@@ -89,9 +89,9 @@ export default class CameraLineStrip2DAliveDeadObject extends SceneObject {
     let everAliveCount = 0;
 
     for (let i = 0; i < this._cellStatus.length; i++) {
-      const alive = Math.random() < 0.3;
+      const alive = Math.random() < 0.1;
       if (alive) {
-        const isEverAlive = Math.random() < 0.01;
+        const isEverAlive = Math.random() < 0.001;
         this._cellStatus[i] = isEverAlive ? 3 : 1;
         if (isEverAlive) everAliveCount++;
         aliveCount++;
