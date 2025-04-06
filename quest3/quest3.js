@@ -48,7 +48,13 @@ async function init() {
     -0.5, -0.5
   ]);
 
-  const grid = new CameraLineStrip2DAliveDeadObject(renderer._device, renderer._canvasFormat, camera._pose, vertices);
+  const grid = new CameraLineStrip2DAliveDeadObject(
+    renderer._device,
+    renderer._canvasFormat,
+    camera._pose,
+    vertices
+  );
+  await grid.init();
   await renderer.appendSceneObject(grid);
 
   // FPS text (top-left)

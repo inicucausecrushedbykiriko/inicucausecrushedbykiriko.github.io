@@ -35,7 +35,17 @@ export default class CameraLineStrip2DAliveDeadObject extends SceneObject {
     this._step = 0;
   }
 
+  async init() {
+    console.log("[CameraLineStrip2DAliveDeadObject] init called");
+    await this.createGeometry();
+    await this.createShaders();
+    await this.createRenderPipeline();
+    await this.createComputePipeline();
+  }
+
   async createGeometry() {
+    console.log("[CameraLineStrip2DAliveDeadObject] createGeometry called");
+
     this._vertexBuffer = this._device.createBuffer({
       label: "Vertices " + this.getName(),
       size: this._vertices.byteLength,
@@ -55,7 +65,7 @@ export default class CameraLineStrip2DAliveDeadObject extends SceneObject {
     });
     this._device.queue.writeBuffer(this._cameraPoseBuffer, 0, this._cameraPose);
 
-    this.randomizeCells();
+    this.randomizeCells();  // <- Important: do this before buffers
     this._cellStateBuffers = [
       this._device.createBuffer({
         label: "Grid status Buffer 1",
@@ -68,13 +78,30 @@ export default class CameraLineStrip2DAliveDeadObject extends SceneObject {
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       }),
     ];
-    this._device.queue.writeBuffer(this._cellStateBuffers[0], 0, this._cellStatus);
+
+    this.refreshGPUCellState();
   }
 
   randomizeCells() {
+    console.log("[CameraLineStrip2DAliveDeadObject] randomizeCells() called");
+
+    let aliveCount = 0;
+    let everAliveCount = 0;
+
     for (let i = 0; i < this._cellStatus.length; i++) {
-      this._cellStatus[i] = Math.random() < 0.3 ? 1 : 0;
+      const alive = Math.random() < 0.3;
+      if (alive) {
+        const isEverAlive = Math.random() < 0.01;
+        this._cellStatus[i] = isEverAlive ? 3 : 1;
+        if (isEverAlive) everAliveCount++;
+        aliveCount++;
+      } else {
+        this._cellStatus[i] = 0;
+      }
     }
+
+    console.log(`Total alive cells: ${aliveCount}`);
+    console.log(`Total ever-alive cells (3s): ${everAliveCount}`);
   }
 
   refreshGPUCellState() {
@@ -155,13 +182,6 @@ export default class CameraLineStrip2DAliveDeadObject extends SceneObject {
     ];
   }
 
-  render(pass) {
-    pass.setPipeline(this._renderPipeline);
-    pass.setVertexBuffer(0, this._vertexBuffer);
-    pass.setBindGroup(0, this._bindGroups[this._step % 2]);
-    pass.draw(this._vertices.length / 2, this._width * this._height);
-  }
-
   async createComputePipeline() {
     this._computePipeline = this._device.createComputePipeline({
       layout: this._pipelineLayout,
@@ -170,6 +190,13 @@ export default class CameraLineStrip2DAliveDeadObject extends SceneObject {
         entryPoint: "computeMain",
       },
     });
+  }
+
+  render(pass) {
+    pass.setPipeline(this._renderPipeline);
+    pass.setVertexBuffer(0, this._vertexBuffer);
+    pass.setBindGroup(0, this._bindGroups[this._step % 2]);
+    pass.draw(this._vertices.length / 2, this._width * this._height);
   }
 
   compute(pass) {

@@ -118,9 +118,18 @@ fn vertexMain(@location(0) pos: vec2<f32>, @builtin(instance_index) idx: u32) ->
 // -----------------------------------------------------------------------------
 
 @fragment
-fn fragmentMain(@location(0) cellStatus: f32) -> @location(0) vec4<f32> {
-    return vec4<f32>(28.0 / 255.0, 161.0 / 255.0, 82.0 / 255.0, 1.0) * cellStatus; // (R, G, B, A)
+fn fragmentMain(@location(0) cellStatus: f32) -> @location(0) vec4f {
+  if (cellStatus == 0.0) {
+    return vec4f(0.0, 0.0, 0.0, 1.0); // dead
+  } else if (cellStatus == 1.0) {
+    return vec4f(0.2, 0.6, 0.32, 1.0); // alive (green)
+  } else if (cellStatus == 3.0) {
+    return vec4f(1.0, 0.0, 0.0, 1.0); // ever-alive (red)
+  } else {
+    return vec4f(0.0, 0.0, 1.0, 1.0); // unexpected value = bright blue
+  }
 }
+
 
 // -----------------------------------------------------------------------------
 // Compute Shader
@@ -133,31 +142,33 @@ fn computeMain(@builtin(global_invocation_id) cell: vec3<u32>) {
     let width = 2048u;
     let height = 2048u;
 
-    // Ensure indices are within bounds
     if (x >= width || y >= height) {
         return;
     }
 
-    // Compute linear index
     let i = y * width + x;
 
-    // Count how many neighbors are alive
+    // ✅ Ever-alive cells never change
+    if (cellStatusIn[i] == 3u) {
+        cellStatusOut[i] = 3u;
+        return;
+    }
+
     var neighborsAlive = 0u;
     for (var dy = -1; dy <= 1; dy = dy + 1) {
         for (var dx = -1; dx <= 1; dx = dx + 1) {
-            if (dx == 0 && dy == 0) {
-                continue; // Skip the current cell
-            }
+            if (dx == 0 && dy == 0) { continue; }
             let nx = i32(x) + dx;
             let ny = i32(y) + dy;
             if (nx >= 0 && ny >= 0 && u32(nx) < width && u32(ny) < height) {
                 let neighborIndex = u32(ny) * width + u32(nx);
-                neighborsAlive += cellStatusIn[neighborIndex];
+                let neighborVal = cellStatusIn[neighborIndex];
+                neighborsAlive += select(0u, 1u, neighborVal == 1u || neighborVal == 3u);
             }
         }
     }
 
-    // Compute new status
+    // ✅ Regular game of life rules
     if (cellStatusIn[i] == 1u) {
         if (neighborsAlive < 2u || neighborsAlive > 3u) {
             cellStatusOut[i] = 0u;
