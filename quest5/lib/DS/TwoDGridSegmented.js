@@ -23,8 +23,8 @@
 /*!
  * TwoDGridSegmented.js
  *
- * Provides a 2D spatial grid for polygon segmentation.
- * Safeguards (iteration limits) are added to prevent infinite loops.
+ * Provides a 2D spatial grid for fast inside/outside tests.
+ * Contains loop safeguards to avoid infinite loops.
  */
 
 import PGA2D from '/quest5/lib/Math/PGA2D.js';
@@ -36,7 +36,7 @@ export default class TwoDGridSegmented {
   static UNKNOWN  = 'unknown';
   
   constructor(polygon, grid_size) {
-    // Expect polygon._polygon to be an array of [x, y] points.
+    // Expect polygon._polygon to be an array of [x,y] points.
     this._polygon = JSON.parse(JSON.stringify(polygon));
     if (!Array.isArray(this._polygon._polygon) || this._polygon._polygon[0].length !== 2) {
       throw new Error("TwoDGridSegmented works only for 2D polygon data.");
@@ -68,20 +68,20 @@ export default class TwoDGridSegmented {
   getPointOnSegment(idx, t) {
     const v0 = this._polygon._polygon[idx];
     const [dx, dy] = this._dirs[idx];
-    return [v0[0] + dx * t, v0[1] + dy * t];
+    return [ v0[0] + dx * t, v0[1] + dy * t ];
   }
   
   initCells() {
     this._cells = Array.from({ length: this._grid_size }, () =>
       Array.from({ length: this._grid_size }, () => [[], [], TwoDGridSegmented.UNKNOWN])
     );
-    const [minx, miny, maxx, maxy] = this._boundingBox;
-    this._dx = (maxx - minx) / this._grid_size;
-    this._dy = (maxy - miny) / this._grid_size;
+    const [bx0, by0, bx1, by1] = this._boundingBox;
+    this._dx = (bx1 - bx0) / this._grid_size;
+    this._dy = (by1 - by0) / this._grid_size;
     for (let y = 0; y < this._grid_size; y++) {
       for (let x = 0; x < this._grid_size; x++) {
-        const x0 = minx + x * this._dx;
-        const y0 = miny + y * this._dy;
+        let x0 = bx0 + x * this._dx;
+        let y0 = by0 + y * this._dy;
         this._cells[y][x][0] = [x0, y0, x0 + this._dx, y0 + this._dy];
       }
     }
@@ -92,12 +92,8 @@ export default class TwoDGridSegmented {
     if (p[0] < bx0 || p[0] > bx1 || p[1] < by0 || p[1] > by1) return [-1, -1];
     let cx = Math.floor((p[0] - bx0) / this._dx);
     let cy = Math.floor((p[1] - by0) / this._dy);
-    return (cx < 0 || cx >= this._grid_size || cy < 0 || cy >= this._grid_size) ? [-1, -1] : [cx, cy];
-  }
-  
-  isInCell(x, y, p) {
-    const [minx, miny, maxx, maxy] = this._cells[y][x][0];
-    return (p[0] > minx && p[0] < maxx && p[1] > miny && p[1] < maxy);
+    if (cx < 0 || cx >= this._grid_size || cy < 0 || cy >= this._grid_size) return [-1, -1];
+    return [cx, cy];
   }
   
   getCellHitPoints(cell, startPt, dir) {
@@ -203,7 +199,9 @@ export default class TwoDGridSegmented {
         let [rx, ry] = JSON.parse(first);
         let [bbx0, bby0, bbx1, bby1] = this._cells[ry][rx][0];
         let mid = [(bbx0 + bbx1) * 0.5, (bby0 + bby1) * 0.5];
-        connectedLabel = this.isInsideWindingNumber(mid) ? TwoDGridSegmented.INTERIOR : TwoDGridSegmented.EXTERIOR;
+        connectedLabel = this.isInsideWindingNumber(mid)
+          ? TwoDGridSegmented.INTERIOR
+          : TwoDGridSegmented.EXTERIOR;
       }
       region.forEach(val => {
         let [fx, fy] = JSON.parse(val);
@@ -218,7 +216,8 @@ export default class TwoDGridSegmented {
     for (let i = 0; i < poly.length - 1; i++) {
       let v0 = poly[i];
       let v1 = poly[i + 1];
-      if (((v0[1] <= p[1]) && (v1[1] > p[1])) || ((v0[1] > p[1]) && (v1[1] <= p[1]))) {
+      if (((v0[1] <= p[1]) && (v1[1] > p[1])) ||
+          ((v0[1] > p[1]) && (v1[1] <= p[1]))) {
         let xint = v0[0] + (p[1] - v0[1]) * (v1[0] - v0[0]) / ((v1[1] - v0[1]) + 1e-14);
         if (xint > p[0]) {
           if (PGA2D.isInside(v0, v1, p)) w1++; else w1--;
@@ -231,8 +230,7 @@ export default class TwoDGridSegmented {
   }
   
   isInside(segments, p) {
-    const onLeft = (a, b, q) =>
-      ((b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0])) >= 0;
+    const onLeft = (a, b, q) => ((b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0])) >= 0;
     let [pt, seg] = this.getClosestPointAndSegmentOnSegments(segments, p);
     let v0 = this.getPointOnSegment(seg[0], seg[1]);
     let v1 = this.getPointOnSegment(seg[0], seg[2]);

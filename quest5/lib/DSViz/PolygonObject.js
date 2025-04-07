@@ -23,7 +23,7 @@
 /*!
  * PolygonObject.js
  *
- * Renders a polygon (from polygon._polygon) as a line-strip.
+ * Renders a polygon from polygon._polygon as a line-strip.
  */
 
 import SceneObject from "/quest5/lib/DSViz/SceneObject.js";
@@ -37,7 +37,6 @@ export default class PolygonObject extends SceneObject {
   
   async createGeometry() {
     await this._polygon.init();
-    // Use full vertex count so the duplicate first vertex is drawn.
     this._numV = this._polygon._polygon.length;
     this._dim = this._polygon._polygon[0].length;
     this._vertices = this._polygon._polygon.flat();
@@ -57,7 +56,7 @@ export default class PolygonObject extends SceneObject {
         {
           format: "float32x" + this._dim,
           offset: 0,
-          shaderLocation: 0,
+          shaderLocation: 0
         }
       ]
     };

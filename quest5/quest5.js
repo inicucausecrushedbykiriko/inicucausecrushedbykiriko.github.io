@@ -20,25 +20,49 @@
  *                                measures that legally restrict others from doing
  *                                anything the license permits.
  */
+
 /*!
  * quest5.js
  *
- * Main entry. Only one deformable shape is active at a time.
- * Key controls:
- *   S: switch shape
- *   D: toggle deformation simulation on/off
- *   R: reset current shape
- * The text overlay displays:
- *   - Instructions
- *   - Current shape filename
- *   - Whether deformation is ON/OFF
- *   - Whether the mouse is inside the current shape
+ * Main entry point.
+ * - Only one shape is shown at a time.
+ * - Press 's' to switch shape.
+ * - Press 'd' to toggle between static and deform mode.
+ * - Press 'r' to reset the current shape.
+ * The on-screen text overlay shows:
+ * "s: switch, d: toggle deform, r: reset" plus the mouse inside/outside status.
  */
 
 import Renderer from '/quest5/lib/Viz/2DRenderer.js';
+import PolygonObject from '/quest5/lib/DSViz/PolygonObject.js';
 import DeformablePolygonObject from '/quest5/lib/DSViz/DeformablePolygonObject.js';
-import StandardTextObject from '/quest5/lib/DSViz/StandardTextObject.js';
 import TwoDGridSegmented from '/quest5/lib/DS/TwoDGridSegmented.js';
+import StandardTextObject from '/quest5/lib/DSViz/StandardTextObject.js';
+
+const shapeFiles = [
+  '/quest5/assets/box.polygon',
+  '/quest5/assets/circle.polygon',
+  '/quest5/assets/star.polygon',
+  '/quest5/assets/human.polygon'
+];
+
+let currentIndex = 0;
+let mode = "static"; // "static" or "deform"
+let currentShape = null;
+let currentGrid = null; // for inside/outside testing
+let mouseStatus = "Unknown";
+
+async function loadCurrentShape(renderer) {
+  // Clear previous scene objects.
+  renderer._objects = [];
+  currentGrid = null; // rebuild grid for new shape
+  if (mode === "static") {
+    currentShape = new PolygonObject(renderer._device, renderer._canvasFormat, shapeFiles[currentIndex]);
+  } else {
+    currentShape = new DeformablePolygonObject(renderer._device, renderer._canvasFormat, shapeFiles[currentIndex]);
+  }
+  await renderer.appendSceneObject(currentShape);
+}
 
 async function init() {
   const canvas = document.createElement('canvas');
@@ -48,74 +72,32 @@ async function init() {
   const renderer = new Renderer(canvas);
   await renderer.init();
   
-  // List of shape files.
-  const shapes = [
-    '/quest5/assets/box.polygon',
-    '/quest5/assets/circle.polygon',
-    '/quest5/assets/star.polygon',
-    '/quest5/assets/human.polygon'
-  ];
-  let currentShapeIndex = 0;
+  // Load the initial shape (static mode)
+  await loadCurrentShape(renderer);
   
-  let currentShapeObj = new DeformablePolygonObject(renderer._device, renderer._canvasFormat, shapes[currentShapeIndex]);
-  await renderer.appendSceneObject(currentShapeObj);
-  
-  // Deformation is off by default.
-  let deformEnabled = false;
-  
-  // Set up a grid for mouse inside/outside test.
-  let grid = new TwoDGridSegmented(currentShapeObj._polygon, 64);
-  await grid.init();
-  let mouseStatus = "Unknown";
-  
-  // Text overlay.
-  const statusText = new StandardTextObject(
-    "s: switch shape, d: toggle deform, r: reset\n" +
-    "Shape: " + shapes[currentShapeIndex] + "\n" +
-    "Deform: OFF\n" +
-    "Mouse: Unknown"
+  // Set up text overlay for instructions and status.
+  const overlayText = new StandardTextObject(
+    "s: switch shape | d: toggle deform | r: reset\nMode: " + mode + "\nMouse: " + mouseStatus
   );
   
-  // Key controls.
+  // Set up keyboard event handlers.
   window.addEventListener("keydown", async (evt) => {
-    if (evt.key === "s" || evt.key === "S") {
-      renderer._objects = [];
-      currentShapeIndex = (currentShapeIndex + 1) % shapes.length;
-      currentShapeObj = new DeformablePolygonObject(renderer._device, renderer._canvasFormat, shapes[currentShapeIndex]);
-      // When switching, start with deformation off.
-      currentShapeObj._deformEnabled = false;
-      deformEnabled = false;
-      await renderer.appendSceneObject(currentShapeObj);
-      // Rebuild grid for the new shape.
-      grid = new TwoDGridSegmented(currentShapeObj._polygon, 64);
-      await grid.init();
-      statusText.updateText(
-        "s: switch shape, d: toggle deform, r: reset\n" +
-        "Shape: " + shapes[currentShapeIndex] + "\n" +
-        "Deform: OFF\n" +
-        "Mouse: " + mouseStatus
-      );
-    } else if (evt.key === "d" || evt.key === "D") {
-      deformEnabled = !deformEnabled;
-      currentShapeObj.toggleDeformation();
-      statusText.updateText(
-        "s: switch shape, d: toggle deform, r: reset\n" +
-        "Shape: " + shapes[currentShapeIndex] + "\n" +
-        "Deform: " + (deformEnabled ? "ON" : "OFF") + "\n" +
-        "Mouse: " + mouseStatus
-      );
-    } else if (evt.key === "r" || evt.key === "R") {
-      await currentShapeObj.resetShape();
-      statusText.updateText(
-        "s: switch shape, d: toggle deform, r: reset\n" +
-        "Shape: " + shapes[currentShapeIndex] + "\n" +
-        "Deform: " + (deformEnabled ? "ON" : "OFF") + "\n" +
-        "Mouse: " + mouseStatus
-      );
+    const key = evt.key.toLowerCase();
+    if (key === "s") {
+      // Switch shape
+      currentIndex = (currentIndex + 1) % shapeFiles.length;
+      await loadCurrentShape(renderer);
+    } else if (key === "d") {
+      // Toggle deform mode
+      mode = mode === "static" ? "deform" : "static";
+      await loadCurrentShape(renderer);
+    } else if (key === "r") {
+      // Reset the current shape by reloading it.
+      await loadCurrentShape(renderer);
     }
   });
   
-  // Update mouse inside/outside status.
+  // Update mouse inside/outside status using grid
   canvas.addEventListener("mousemove", (evt) => {
     let rect = canvas.getBoundingClientRect();
     let sx = evt.clientX - rect.left;
@@ -123,30 +105,29 @@ async function init() {
     let ndcx = (sx / canvas.width) * 2 - 1;
     let ndcy = 1 - (sy / canvas.height) * 2;
     let p = [ndcx, ndcy];
-    if (grid) {
-      let outside = grid.isOutsideAssumeLocalConvex(p);
+    if (currentShape && currentShape._polygon) {
+      if (!currentGrid) {
+        // Build grid from the polygon data of the current shape.
+        currentGrid = new TwoDGridSegmented(currentShape._polygon, 64);
+        currentGrid.init();
+      }
+      let outside = currentGrid.isOutsideAssumeLocalConvex(p);
       mouseStatus = outside ? "Outside" : "Inside";
     }
   });
   
-  let lastTime = Date.now();
-  const fps = 60;
-  const msPF = 1000 / fps;
+  // Animation loop
   function animate() {
     requestAnimationFrame(animate);
-    let now = Date.now();
-    if (now - lastTime > msPF) {
-      lastTime = now;
-      renderer.render();
-    }
+    renderer.render();
   }
   animate();
   
+  // Update overlay text every 100ms.
   setInterval(() => {
-    statusText.updateText(
-      "s: switch shape, d: toggle deform, r: reset\n" +
-      "Shape: " + shapes[currentShapeIndex] + "\n" +
-      "Deform: " + (deformEnabled ? "ON" : "OFF") + "\n" +
+    overlayText.updateText(
+      "s: switch shape | d: toggle deform | r: reset\n" +
+      "Mode: " + mode + "\n" +
       "Mouse: " + mouseStatus
     );
   }, 100);
@@ -156,6 +137,6 @@ async function init() {
 
 init().then(() => {
   console.log("Quest5 scene running...");
-}).catch((err) => {
+}).catch(err => {
   console.error("Error in quest5:", err);
 });
