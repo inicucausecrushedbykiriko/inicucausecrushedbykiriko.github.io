@@ -20,12 +20,7 @@
  *                                measures that legally restrict others from doing
  *                                anything the license permits.
  */
-/*!
- * TwoDGridSegmented.js
- *
- * Provides a 2D spatial grid for fast inside/outside tests.
- * Contains loop safeguards to avoid infinite loops.
- */
+
 
 import PGA2D from '/quest5/lib/Math/PGA2D.js';
 

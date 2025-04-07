@@ -7,12 +7,6 @@
  * Also supports reset to original state.
  */
 
-/*!
- * DeformablePolygonObject.js
- *
- * Implements a simple PBD-like deformable polygon.
- * Uniforms are passed via a fixed-size struct.
- */
 
 import SceneObject from "/quest5/lib/DSViz/SceneObject.js";
 import Polygon from "/quest5/lib/DS/Polygon.js";

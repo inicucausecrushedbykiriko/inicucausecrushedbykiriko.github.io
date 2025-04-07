@@ -20,11 +20,7 @@
  *                                measures that legally restrict others from doing
  *                                anything the license permits.
  */
-/*!
- * PolygonObject.js
- *
- * Renders a polygon from polygon._polygon as a line-strip.
- */
+
 
 import SceneObject from "/quest5/lib/DSViz/SceneObject.js";
 import Polygon from "/quest5/lib/DS/Polygon.js";

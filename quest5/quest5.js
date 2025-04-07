@@ -21,17 +21,6 @@
  *                                anything the license permits.
  */
 
-/*!
- * quest5.js
- *
- * Main entry point.
- * - Only one shape is shown at a time.
- * - Press 's' to switch shape.
- * - Press 'd' to toggle between static and deform mode.
- * - Press 'r' to reset the current shape.
- * The on-screen text overlay shows:
- * "s: switch, d: toggle deform, r: reset" plus the mouse inside/outside status.
- */
 
 import Renderer from '/quest5/lib/Viz/2DRenderer.js';
 import PolygonObject from '/quest5/lib/DSViz/PolygonObject.js';
