@@ -31,7 +31,7 @@ export default class RayTracingBoxObject extends RayTracingObject {
     this._camera = camera;
     this._showTexture = showTexture;
   }
-  
+   
   async createGeometry() {
     // Create camera buffer to store the camera pose and scale in GPU
     this._cameraBuffer = this._device.createBuffer({

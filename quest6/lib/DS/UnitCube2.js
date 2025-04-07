@@ -75,3 +75,4 @@ export default class UnitCube {
     for (let i = 0; i < 8; ++i) this._pose[i] = newPose[i];
   }
 }
+ 

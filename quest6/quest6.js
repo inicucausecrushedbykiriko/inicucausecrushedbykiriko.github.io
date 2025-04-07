@@ -32,49 +32,181 @@ import RayTracingBoxObject from '/quest6/lib/DSViz/RayTracingBoxObject2.js'
 import Camera from '/quest6/lib/Viz/3DCamera2.js'
 
 async function init() {
-  // Create a canvas tag
   const canvasTag = document.createElement('canvas');
   canvasTag.id = "renderCanvas";
   document.body.appendChild(canvasTag);
-  // Create a ray tracer
+
   const tracer = new RayTracer(canvasTag);
   await tracer.init();
-  // Create a 3D Camera
+
   var camera = new Camera();
-  // Create an object to trace
-  var tracerObj = new RayTracingBoxObject(tracer._device, tracer._canvasFormat, camera);
+  camera._isProjective = false;
+  const tracerObj = new RayTracingBoxObject(tracer._device, tracer._canvasFormat, camera);
   await tracer.setTracerObject(tracerObj);
-  
+
   let fps = '??';
-  var fpsText = new StandardTextObject('fps: ' + fps);
-  
-  // run animation at 60 fps
-  var frameCnt = 0;
-  var tgtFPS = 60;
-  var secPerFrame = 1. / tgtFPS;
-  var frameInterval = secPerFrame * 1000;
-  var lastCalled;
+  let fpsText = new StandardTextObject('fps: ' + fps);
+  let helpText = new StandardTextObject(
+    "Quest6 Raytracing:\n" +
+    "T - Change camera mode\n" +
+    "W/S/A/D/R/F - Move Camera\n" +
+    "Arrows - Rotate Camera\n" +
+    "+/- - Adjust Focal (Projective)\n" +
+    "I/K/J/L/U/O - Move Cube\n" +
+    "1/2/3/4/5/6 - Rotate Cube\n" +
+    "Camera: Orthographic"
+  );
+  helpText._textCanvas.style.top = '80px';
+
+  function updateHelpText() {
+    helpText.updateText(
+      "Quest6 Raytracing:\n" +
+      "T - Change camera mode\n" +
+      "W/S/A/D/R/F - Move Camera\n" +
+      "Arrows - Rotate Camera\n" +
+      "+/- - Adjust Focal (Projective)\n" +
+      "I/K/J/L/U/O - Move Cube\n" +
+      "1/2/3/4/5/6 - Rotate Cube\n" +
+      "Camera: " + (camera._isProjective ? "Projective" : "Orthographic")
+    );
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'T' || e.key === 't') {
+      camera._isProjective = !camera._isProjective;
+      updateHelpText();
+    }
+    if (e.key === 'w' || e.key === 'W') {
+      camera.moveZ(0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 's' || e.key === 'S') {
+      camera.moveZ(-0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'a' || e.key === 'A') {
+      camera.moveX(-0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'd' || e.key === 'D') {
+      camera.moveX(0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'r' || e.key === 'R') {
+      camera.moveY(0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'f' || e.key === 'F') {
+      camera.moveY(-0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'ArrowUp') {
+      camera.rotateX(-0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'ArrowDown') {
+      camera.rotateX(0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'ArrowLeft') {
+      camera.rotateY(0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'ArrowRight') {
+      camera.rotateY(-0.1);
+      tracerObj.updateCameraPose();
+    }
+    if ((e.key === '+' || e.key === '=') && camera._isProjective) {
+      camera._focal[0] *= 1.1;
+      camera._focal[1] *= 1.1;
+      tracerObj.updateCameraFocal();
+    }
+    if (e.key === '-' && camera._isProjective) {
+      camera._focal[0] /= 1.1;
+      camera._focal[1] /= 1.1;
+      tracerObj.updateCameraFocal();
+    }
+    let boxPose = tracerObj._box._pose;
+    if (e.key === 'i' || e.key === 'I') {
+      boxPose[2] += 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === 'k' || e.key === 'K') {
+      boxPose[2] -= 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === 'j' || e.key === 'J') {
+      boxPose[0] -= 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === 'l' || e.key === 'L') {
+      boxPose[0] += 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === 'u' || e.key === 'U') {
+      boxPose[1] += 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === 'o' || e.key === 'O') {
+      boxPose[1] -= 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === '1') {
+      boxPose[4] += 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === '2') {
+      boxPose[4] -= 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === '3') {
+      boxPose[5] += 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === '4') {
+      boxPose[5] -= 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === '5') {
+      boxPose[6] += 0.1;
+      tracerObj.updateBoxPose();
+    }
+    if (e.key === '6') {
+      boxPose[6] -= 0.1;
+      tracerObj.updateBoxPose();
+    }
+  });
+
+  let frameCnt = 0;
+  let tgtFPS = 60;
+  let secPerFrame = 1. / tgtFPS;
+  let frameInterval = secPerFrame * 1000;
+  let lastCalled;
+
   let renderFrame = () => {
     let elapsed = Date.now() - lastCalled;
     if (elapsed > frameInterval) {
-      ++frameCnt;
+      frameCnt++;
       lastCalled = Date.now() - (elapsed % frameInterval);
       tracer.render();
     }
     requestAnimationFrame(renderFrame);
   };
+
   lastCalled = Date.now();
   renderFrame();
-  setInterval(() => { 
+
+  setInterval(() => {
     fpsText.updateText('fps: ' + frameCnt);
     frameCnt = 0;
-  }, 1000); // call every 1000 ms
+  }, 1000);
+
   return tracer;
 }
 
-init().then( ret => {
+init().then((ret) => {
   console.log(ret);
-}).catch( error => {
+}).catch((error) => {
   const pTag = document.createElement('p');
   pTag.innerHTML = navigator.userAgent + "</br>" + error.message;
   document.body.appendChild(pTag);
