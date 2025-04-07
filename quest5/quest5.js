@@ -20,6 +20,20 @@
  *                                measures that legally restrict others from doing
  *                                anything the license permits.
  */
+/*!
+ * quest5.js
+ *
+ * Main entry. Only one deformable shape is active at a time.
+ * Key controls:
+ *   S: switch shape
+ *   D: toggle deformation simulation on/off
+ *   R: reset current shape
+ * The text overlay displays:
+ *   - Instructions
+ *   - Current shape filename
+ *   - Whether deformation is ON/OFF
+ *   - Whether the mouse is inside the current shape
+ */
 
 import Renderer from '/quest5/lib/Viz/2DRenderer.js';
 import DeformablePolygonObject from '/quest5/lib/DSViz/DeformablePolygonObject.js';
@@ -34,95 +48,85 @@ async function init() {
   const renderer = new Renderer(canvas);
   await renderer.init();
   
-  // List of deformable shape files.
+  // List of shape files.
   const shapes = [
     '/quest5/assets/box.polygon',
     '/quest5/assets/circle.polygon',
     '/quest5/assets/star.polygon',
     '/quest5/assets/human.polygon'
   ];
+  let currentShapeIndex = 0;
   
-  let currentIndex = 0;
+  let currentShapeObj = new DeformablePolygonObject(renderer._device, renderer._canvasFormat, shapes[currentShapeIndex]);
+  await renderer.appendSceneObject(currentShapeObj);
   
-  // Create the first deformable polygon object.
-  let currentShape = new DeformablePolygonObject(renderer._device, renderer._canvasFormat, shapes[currentIndex]);
-  await renderer.appendSceneObject(currentShape);
+  // Deformation is off by default.
+  let deformEnabled = false;
   
-  // Text overlay with instructions and status.
+  // Set up a grid for mouse inside/outside test.
+  let grid = new TwoDGridSegmented(currentShapeObj._polygon, 64);
+  await grid.init();
+  let mouseStatus = "Unknown";
+  
+  // Text overlay.
   const statusText = new StandardTextObject(
-    "S: switch shape | D: toggle deform | R: reset\n" +
-    "Shape: " + shapes[currentIndex] + "\n" +
+    "s: switch shape, d: toggle deform, r: reset\n" +
+    "Shape: " + shapes[currentShapeIndex] + "\n" +
     "Deform: OFF\n" +
     "Mouse: Unknown"
   );
   
-  // For inside/outside detection, build a grid for the current shape.
-  let grid = null;
-  function updateInsideStatus(mousePos) {
-    if (!grid) {
-      grid = new TwoDGridSegmented(currentShape._polygon, 64);
-      grid.init();
-    }
-    const outside = grid.isOutsideAssumeLocalConvex(mousePos);
-    return outside ? "Outside" : "Inside";
-  }
-  
-  // Key events: S, D, R.
+  // Key controls.
   window.addEventListener("keydown", async (evt) => {
-    if (evt.key.toLowerCase() === "s") {
-      // Switch shape: remove current shape and load next one.
+    if (evt.key === "s" || evt.key === "S") {
       renderer._objects = [];
-      currentIndex = (currentIndex + 1) % shapes.length;
-      currentShape = new DeformablePolygonObject(renderer._device, renderer._canvasFormat, shapes[currentIndex]);
-      await renderer.appendSceneObject(currentShape);
-      // Rebuild grid for new shape.
-      grid = new TwoDGridSegmented(currentShape._polygon, 64);
-      grid.init();
+      currentShapeIndex = (currentShapeIndex + 1) % shapes.length;
+      currentShapeObj = new DeformablePolygonObject(renderer._device, renderer._canvasFormat, shapes[currentShapeIndex]);
+      // When switching, start with deformation off.
+      currentShapeObj._deformEnabled = false;
+      deformEnabled = false;
+      await renderer.appendSceneObject(currentShapeObj);
+      // Rebuild grid for the new shape.
+      grid = new TwoDGridSegmented(currentShapeObj._polygon, 64);
+      await grid.init();
       statusText.updateText(
-        "S: switch shape | D: toggle deform | R: reset\n" +
-        "Shape: " + shapes[currentIndex] + "\n" +
-        "Deform: " + (currentShape._deformEnabled ? "ON" : "OFF") + "\n" +
-        "Mouse: Unknown"
+        "s: switch shape, d: toggle deform, r: reset\n" +
+        "Shape: " + shapes[currentShapeIndex] + "\n" +
+        "Deform: OFF\n" +
+        "Mouse: " + mouseStatus
       );
-    } else if (evt.key.toLowerCase() === "d") {
-      // Toggle deformation.
-      currentShape._deformEnabled = !currentShape._deformEnabled;
+    } else if (evt.key === "d" || evt.key === "D") {
+      deformEnabled = !deformEnabled;
+      currentShapeObj.toggleDeformation();
       statusText.updateText(
-        "S: switch shape | D: toggle deform | R: reset\n" +
-        "Shape: " + shapes[currentIndex] + "\n" +
-        "Deform: " + (currentShape._deformEnabled ? "ON" : "OFF") + "\n" +
-        "Mouse: Unknown"
+        "s: switch shape, d: toggle deform, r: reset\n" +
+        "Shape: " + shapes[currentShapeIndex] + "\n" +
+        "Deform: " + (deformEnabled ? "ON" : "OFF") + "\n" +
+        "Mouse: " + mouseStatus
       );
-    } else if (evt.key.toLowerCase() === "r") {
-      // Reset: re-create the current shape.
-      renderer._objects = [];
-      currentShape = new DeformablePolygonObject(renderer._device, renderer._canvasFormat, shapes[currentIndex]);
-      await renderer.appendSceneObject(currentShape);
-      grid = new TwoDGridSegmented(currentShape._polygon, 64);
-      grid.init();
+    } else if (evt.key === "r" || evt.key === "R") {
+      await currentShapeObj.resetShape();
       statusText.updateText(
-        "S: switch shape | D: toggle deform | R: reset\n" +
-        "Shape: " + shapes[currentIndex] + "\n" +
-        "Deform: " + (currentShape._deformEnabled ? "ON" : "OFF") + "\n" +
-        "Mouse: Unknown"
+        "s: switch shape, d: toggle deform, r: reset\n" +
+        "Shape: " + shapes[currentShapeIndex] + "\n" +
+        "Deform: " + (deformEnabled ? "ON" : "OFF") + "\n" +
+        "Mouse: " + mouseStatus
       );
     }
   });
   
   // Update mouse inside/outside status.
   canvas.addEventListener("mousemove", (evt) => {
-    const rect = canvas.getBoundingClientRect();
-    const sx = evt.clientX - rect.left;
-    const sy = evt.clientY - rect.top;
-    const ndcx = (sx / canvas.width) * 2 - 1;
-    const ndcy = 1 - (sy / canvas.height) * 2;
-    const mouseStatus = updateInsideStatus([ndcx, ndcy]);
-    statusText.updateText(
-      "S: switch shape | D: toggle deform | R: reset\n" +
-      "Shape: " + shapes[currentIndex] + "\n" +
-      "Deform: " + (currentShape._deformEnabled ? "ON" : "OFF") + "\n" +
-      "Mouse: " + mouseStatus
-    );
+    let rect = canvas.getBoundingClientRect();
+    let sx = evt.clientX - rect.left;
+    let sy = evt.clientY - rect.top;
+    let ndcx = (sx / canvas.width) * 2 - 1;
+    let ndcy = 1 - (sy / canvas.height) * 2;
+    let p = [ndcx, ndcy];
+    if (grid) {
+      let outside = grid.isOutsideAssumeLocalConvex(p);
+      mouseStatus = outside ? "Outside" : "Inside";
+    }
   });
   
   let lastTime = Date.now();
@@ -133,12 +137,19 @@ async function init() {
     let now = Date.now();
     if (now - lastTime > msPF) {
       lastTime = now;
-      // Update geometry (e.g. mouse position) for the current shape.
-      currentShape.updateGeometry();
       renderer.render();
     }
   }
   animate();
+  
+  setInterval(() => {
+    statusText.updateText(
+      "s: switch shape, d: toggle deform, r: reset\n" +
+      "Shape: " + shapes[currentShapeIndex] + "\n" +
+      "Deform: " + (deformEnabled ? "ON" : "OFF") + "\n" +
+      "Mouse: " + mouseStatus
+    );
+  }, 100);
   
   return renderer;
 }

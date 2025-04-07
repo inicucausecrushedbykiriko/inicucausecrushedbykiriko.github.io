@@ -20,6 +20,12 @@
  *                                measures that legally restrict others from doing
  *                                anything the license permits.
  */
+/*!
+ * TwoDGridSegmented.js
+ *
+ * Provides a 2D spatial grid for polygon segmentation.
+ * Safeguards (iteration limits) are added to prevent infinite loops.
+ */
 
 import PGA2D from '/quest5/lib/Math/PGA2D.js';
 
@@ -62,7 +68,7 @@ export default class TwoDGridSegmented {
   getPointOnSegment(idx, t) {
     const v0 = this._polygon._polygon[idx];
     const [dx, dy] = this._dirs[idx];
-    return [ v0[0] + dx * t, v0[1] + dy * t ];
+    return [v0[0] + dx * t, v0[1] + dy * t];
   }
   
   initCells() {
@@ -212,8 +218,7 @@ export default class TwoDGridSegmented {
     for (let i = 0; i < poly.length - 1; i++) {
       let v0 = poly[i];
       let v1 = poly[i + 1];
-      if (((v0[1] <= p[1]) && (v1[1] > p[1])) ||
-          ((v0[1] > p[1]) && (v1[1] <= p[1]))) {
+      if (((v0[1] <= p[1]) && (v1[1] > p[1])) || ((v0[1] > p[1]) && (v1[1] <= p[1]))) {
         let xint = v0[0] + (p[1] - v0[1]) * (v1[0] - v0[0]) / ((v1[1] - v0[1]) + 1e-14);
         if (xint > p[0]) {
           if (PGA2D.isInside(v0, v1, p)) w1++; else w1--;

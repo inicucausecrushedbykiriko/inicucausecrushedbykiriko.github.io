@@ -1,9 +1,23 @@
 /*!
  * DeformablePolygonObject.js
  *
- * Implements a simple PBD simulation.
- * Uniforms are passed via a fixed-size uniform struct.
- * Initially, deformation is disabled.
+ * Implements a simple PBD-like deformable polygon.
+ * Compute shaders use a fixed-size uniform struct.
+ * Deformation is off by default; it can be toggled.
+ * Also supports reset to original state.
+ */
+
+/*!
+ * DeformablePolygonObject.js
+ *
+ * Implements a simple PBD-like deformable polygon.
+ * The compute shaders use a fixed-size uniform struct.
+ * Initially, deformation is off.
+ * Keys:
+ *   S: switch shape (handled in quest5.js)
+ *   D: toggle deformation simulation on/off
+ *   R: reset current shape to original state
+ * The text overlay shows instructions and whether the mouse is inside.
  */
 
 import SceneObject from "/quest5/lib/DSViz/SceneObject.js";
@@ -22,14 +36,20 @@ export default class DeformablePolygonObject extends SceneObject {
     };
     this._mouseDown = false;
     this._mousePos = [0, 0];
-    this._deformEnabled = false; // initially, do not deform
+    // Deformation is off by default.
+    this._deformEnabled = false;
     this._polygon = new Polygon(filename);
+    // Save original polygon for resetting.
+    this._originalPolygon = null;
   }
   
   async createGeometry() {
     await this._polygon.init();
+    // Save a copy of the original polygon (including duplicate closing vertex)
+    this._originalPolygon = JSON.parse(JSON.stringify(this._polygon._polygon));
     const poly = this._polygon._polygon;
-    this._numV = poly.length - 1; // skip repeated last vertex
+    // Use the full vertex array so that the closing edge is drawn.
+    this._numV = poly.length;
     const floatsPerVert = 6; // [x, y, oldx, oldy, restLenPrev, restLenNext]
     let data = new Float32Array(this._numV * floatsPerVert);
     
@@ -42,15 +62,20 @@ export default class DeformablePolygonObject extends SceneObject {
       data[i * floatsPerVert + 2] = v[0];
       data[i * floatsPerVert + 3] = v[1];
     }
-    for (let i = 0; i < this._numV; i++) {
-      let iPrev = (i - 1 + this._numV) % this._numV;
-      let iNext = (i + 1) % this._numV;
+    // Compute rest lengths for unique vertices (ignore duplicate closing vertex)
+    for (let i = 0; i < this._numV - 1; i++) {
+      let iPrev = (i - 1 + (this._numV - 1)) % (this._numV - 1);
+      let iNext = (i + 1) % (this._numV - 1);
       let x0 = data[i * floatsPerVert + 0], y0 = data[i * floatsPerVert + 1];
       let xp = data[iPrev * floatsPerVert + 0], yp = data[iPrev * floatsPerVert + 1];
       let xn = data[iNext * floatsPerVert + 0], yn = data[iNext * floatsPerVert + 1];
       data[i * floatsPerVert + 4] = dist(x0, y0, xp, yp);
       data[i * floatsPerVert + 5] = dist(x0, y0, xn, yn);
     }
+    // For the closing vertex, simply copy the values from the first vertex.
+    let last = (this._numV - 1) * floatsPerVert;
+    data[last + 4] = data[0 + 4];
+    data[last + 5] = data[0 + 5];
     
     this._mainBuf = this._device.createBuffer({
       size: data.byteLength,
@@ -95,7 +120,6 @@ export default class DeformablePolygonObject extends SceneObject {
   }
   
   async createShaders() {
-    // Compute shader for gravity – note that mutable variables are declared with var.
     this._computeShaderGravity = `
       struct UniformParams {
         gravity   : f32,
@@ -154,7 +178,6 @@ export default class DeformablePolygonObject extends SceneObject {
       }
     `;
     
-    // Compute shader for constraints.
     this._computeShaderConstraints = `
       struct Vertex {
         pos : vec2f,
@@ -194,7 +217,6 @@ export default class DeformablePolygonObject extends SceneObject {
       }
     `;
     
-    // Render shader for line-strip drawing.
     this._renderShader = `
       @vertex
       fn vsMain(@location(0) position: vec2f) -> @builtin(position) vec4f {
@@ -282,7 +304,9 @@ export default class DeformablePolygonObject extends SceneObject {
   async createComputePipeline() {}
   
   compute(passEnc) {
-    if (!this._deformEnabled) return; // if deformation is disabled, do nothing
+    // Run compute only if deformation is enabled.
+    if (!this._deformEnabled) return;
+    
     const arr = new Float32Array([
       this._params.gravity,
       this._params.floorY,
@@ -304,5 +328,15 @@ export default class DeformablePolygonObject extends SceneObject {
       passEnc.setBindGroup(0, this._bgConstraints);
       passEnc.dispatchWorkgroups(Math.ceil(this._numVertices / 64));
     }
+  }
+  
+  toggleDeformation() {
+    this._deformEnabled = !this._deformEnabled;
+  }
+  
+  async resetShape() {
+    // Reset the polygon to its original state.
+    this._polygon._polygon = JSON.parse(JSON.stringify(this._originalPolygon));
+    await this.createGeometry();
   }
 }
