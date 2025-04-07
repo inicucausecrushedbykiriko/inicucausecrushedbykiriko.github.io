@@ -27,12 +27,12 @@
 // Firefox Nightly: sudo snap install firefox --channel=latext/edge or download from https://www.mozilla.org/en-US/firefox/channel/desktop/
 
 // quest2-starter.js
-import FilteredRenderer from '/quest4/lib/Viz/2DFilteredRenderer.js';
-import Standard2DFullScreenObject from '/quest4/lib/DSViz/Standard2DFullScreenObject.js';
-import Standard2DPGAPosedVertexColorObject from '/quest4/lib/DSViz/Standard2DPGAPosedVertexColorObject.js';
-import DemoTreeObject from '/quest4/lib/DSViz/DemoTreeObject.js';
-import PGA2D from '/quest4/lib/Math/PGA2D.js';
-import circleMaker from '/quest4/lib/DSViz/circle.js'; // Import the circle function
+import FilteredRenderer from '/lib/Viz/2DFilteredRenderer.js';
+import Standard2DFullScreenObject from '/lib/DSViz/Standard2DFullScreenObject.js';
+import Standard2DPGAPosedVertexColorObject from '/lib/DSViz/Standard2DPGAPosedVertexColorObject.js';
+import DemoTreeObject from '/lib/DSViz/DemoTreeObject.js';
+import PGA2D from '/lib/Math/PGA2D.js';
+import circleMaker from '/lib/DSViz/circle.js'; // Import the circle function
 
 async function init() {
   // Create a canvas tag

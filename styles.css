@@ -46,6 +46,16 @@ h1 {
     animation: glowText 2s ease-in-out infinite alternate; /* Glow animation for heading */
 }
 
+/* Grid container for portal buttons */
+.portal-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 20px;
+}
+
 /* Style for the portal button */
 .portal-button {
     display: inline-block;
@@ -58,13 +68,15 @@ h1 {
     cursor: pointer;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
     text-decoration: none; /* Remove underline */
+    background: linear-gradient(90deg, #1e90ff, #00bfff);
+    justify-self: center;
 }
 
 .portal-button:hover {
     transform: translateY(-5px);
     box-shadow: 0px 8px 10px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(90deg, #00bfff, #1e90ff);
 }
-
 
 /* Glow animation for the heading */
 @keyframes glowText {
@@ -86,13 +98,13 @@ p {
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* Style for the button */
+/* Style for the spell button */
 button {
     display: block;
     margin: 30px auto;
     padding: 15px 30px;
     font-size: 1.2rem;
-    background: linear-gradient(90deg, #ff7eb3, #ff758c);
+    background: linear-gradient(90deg, #1e90ff, #00bfff);
     color: white;
     border: none;
     border-radius: 50px;
@@ -101,11 +113,10 @@ button {
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
-/* Button hover effect */
 button:hover {
     transform: translateY(-5px);
     box-shadow: 0px 8px 10px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(90deg, #ff758c, #ff7eb3);
+    background: linear-gradient(90deg, #00bfff, #1e90ff);
 }
 
 /* Spell result text style */
