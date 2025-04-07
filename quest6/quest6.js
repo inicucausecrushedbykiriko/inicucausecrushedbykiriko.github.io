@@ -21,88 +21,62 @@
  *                                anything the license permits.
  */
 
+// Check your browser supports: https://github.com/gpuweb/gpuweb/wiki/Implementation-Status#implementation-status
+// Need to enable experimental flags chrome://flags/
+// Chrome & Edge 113+ : Enable Vulkan, Default ANGLE Vulkan, Vulkan from ANGLE, Unsafe WebGPU Support, and WebGPU Developer Features (if exsits)
+// Firefox Nightly: sudo snap install firefox --channel=latext/edge or download from https://www.mozilla.org/en-US/firefox/channel/desktop/
+
 import RayTracer from '/quest6/lib/Viz/RayTracer.js'
 import StandardTextObject from '/quest6/lib/DSViz/StandardTextObject.js'
 import RayTracingBoxObject from '/quest6/lib/DSViz/RayTracingBoxObject2.js'
 import Camera from '/quest6/lib/Viz/3DCamera2.js'
 
 async function init() {
+  // Create a canvas tag
   const canvasTag = document.createElement('canvas');
   canvasTag.id = "renderCanvas";
   document.body.appendChild(canvasTag);
-  // Pass the canvas width and height into the camera constructor.
-  const camera = new Camera(canvasTag.width, canvasTag.height);
+  // Create a ray tracer
   const tracer = new RayTracer(canvasTag);
   await tracer.init();
-  const tracerObj = new RayTracingBoxObject(tracer._device, tracer._canvasFormat, camera);
+  // Create a 3D Camera
+  var camera = new Camera();
+  // Create an object to trace
+  var tracerObj = new RayTracingBoxObject(tracer._device, tracer._canvasFormat, camera);
   await tracer.setTracerObject(tracerObj);
   
-  const fpsText = new StandardTextObject('fps: ??');
-  // Create an instructions/info text box.
-  const infoText = new StandardTextObject(
-    "Controls:\n" +
-    "W: forward\nA: left\nS: back\nD: right\n" +
-    "Space: up\nControl: down\n" +
-    "Arrow Up/Down: rotate X\nArrow Left/Right: rotate Y\n" +
-    "Q/E: rotate Z\nT: toggle camera mode\n" +
-    "- /=: change focal X\n[ / ]: change focal Y\n" +
-    "U: toggle camera/object"
-  );
-  infoText._textCanvas.style.left = '1000px';
+  let fps = '??';
+  var fpsText = new StandardTextObject('fps: ' + fps);
   
-  let controllingCamera = true;
-  const moveSpeed = 0.05;
-  const rotateSpeed = 2 * Math.PI / 180;
-  const focalDelta = 0.1;
-  document.addEventListener('keydown', (ev) => {
-    const target = controllingCamera ? camera : tracerObj;
-    switch(ev.key) {
-      case 'w': case 'W': target.moveZ(moveSpeed); break;
-      case 's': case 'S': target.moveZ(-moveSpeed); break;
-      case 'a': case 'A': target.moveX(-moveSpeed); break;
-      case 'd': case 'D': target.moveX(moveSpeed); break;
-      case ' ': target.moveY(moveSpeed); break;
-      case 'Control': case 'ControlLeft': case 'ControlRight': target.moveY(-moveSpeed); break;
-      case 'q': case 'Q': target.rotateZ(rotateSpeed); break;
-      case 'e': case 'E': target.rotateZ(-rotateSpeed); break;
-      case 'ArrowUp': target.rotateX(-rotateSpeed); break;
-      case 'ArrowDown': target.rotateX(rotateSpeed); break;
-      case 'ArrowLeft': target.rotateY(rotateSpeed); break;
-      case 'ArrowRight': target.rotateY(-rotateSpeed); break;
-      case 't': case 'T': camera._isProjective = !camera._isProjective; break;
-      case '-': camera.changeFocalX(focalDelta); tracerObj.updateCameraFocal(); break;
-      case '=': camera.changeFocalX(-focalDelta); tracerObj.updateCameraFocal(); break;
-      case '[': camera.changeFocalY(focalDelta); tracerObj.updateCameraFocal(); break;
-      case ']': camera.changeFocalY(-focalDelta); tracerObj.updateCameraFocal(); break;
-      case 'u': case 'U': controllingCamera = !controllingCamera; break;
-    }
-    tracerObj.updateCameraPose();
-    tracerObj.updateBoxPose();
-  });
-  
-  let frameCnt = 0;
-  let lastCalled = Date.now();
-  function renderFrame() {
+  // run animation at 60 fps
+  var frameCnt = 0;
+  var tgtFPS = 60;
+  var secPerFrame = 1. / tgtFPS;
+  var frameInterval = secPerFrame * 1000;
+  var lastCalled;
+  let renderFrame = () => {
     let elapsed = Date.now() - lastCalled;
-    if (elapsed > 16) {
-      frameCnt++;
-      lastCalled = Date.now() - (elapsed % 16);
+    if (elapsed > frameInterval) {
+      ++frameCnt;
+      lastCalled = Date.now() - (elapsed % frameInterval);
       tracer.render();
     }
     requestAnimationFrame(renderFrame);
-  }
+  };
+  lastCalled = Date.now();
   renderFrame();
-  setInterval(() => {
+  setInterval(() => { 
     fpsText.updateText('fps: ' + frameCnt);
     frameCnt = 0;
-  }, 1000);
+  }, 1000); // call every 1000 ms
   return tracer;
 }
 
-init().then(ret => { console.log(ret); })
-  .catch(error => {
-    const pTag = document.createElement('p');
-    pTag.innerHTML = navigator.userAgent + "</br>" + error.message;
-    document.body.appendChild(pTag);
-    document.getElementById("renderCanvas").remove();
-  });
+init().then( ret => {
+  console.log(ret);
+}).catch( error => {
+  const pTag = document.createElement('p');
+  pTag.innerHTML = navigator.userAgent + "</br>" + error.message;
+  document.body.appendChild(pTag);
+  document.getElementById("renderCanvas").remove();
+});

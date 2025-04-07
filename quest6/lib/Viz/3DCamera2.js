@@ -20,73 +20,64 @@
  *                                measures that legally restrict others from doing
  *                                anything the license permits.
  */
-import PGA3D from '/quest6/lib/Math/PGA3D.js'
-
+ 
+import Math3D from '/quest6/lib/Math/Math3D.js'
+ 
 export default class Camera {
-  constructor(w=0, h=0){
-    this._pose = new Float32Array(16)
-    for(let i=0; i<16; i++) this._pose[i] = 0
-    this._pose[0] = 1
-    this._focal = new Float32Array([1,1])
-    this._resolutions = new Float32Array([w, h])
-    this._isProjective = false
+  constructor(width, height) {
+    // pose has eight values
+    // First three store the current camera location [pos x, pos y, pos z] + 1 padding
+    // Second three store the current camera orientations [angle x, angle y, angle z] + 1 padding
+    // the orientation is described by the rotation along the x-, y-, and z-axis.
+    this._pose = new Float32Array(Array(8).fill(0));
+    this._focal = new Float32Array(Array(2).fill(1));
+    this._resolutions = new Float32Array([width, height]);
   }
-  resetPose(){
-    for(let i=0; i<16; i++) this._pose[i] = 0
-    this._pose[0] = 1
-    this._focal[0] = 1
-    this._focal[1] = 1
+  
+  resetPose() {
+    for (let i = 0; i < 8; ++i) this._pose[i] = 0;
+    this._focal[0] = 1;
+    this._focal[1] = 1;
   }
-  updatePose(n){ for(let i=0; i<16; i++) this._pose[i] = n[i] }
-  updateSize(w, h){ this._resolutions[0] = w; this._resolutions[1] = h }
-  moveX(d){
-    let r = PGA3D.extractRotor(this._pose)
-    let v = PGA3D.applyMotorToPoint([d,0,0], r)
-    let t = PGA3D.createTranslator(v[0], v[1], v[2])
-    let p = PGA3D.geometricProduct(t, this._pose)
-    this.updatePose(p)
+  
+  updatePose(newpose) {
+    for (let i = 0; i < 8; ++i) this._pose[i] = newpose[i];
   }
-  moveY(d){
-    let r = PGA3D.extractRotor(this._pose)
-    let v = PGA3D.applyMotorToPoint([0,d,0], r)
-    let t = PGA3D.createTranslator(v[0], v[1], v[2])
-    let p = PGA3D.geometricProduct(t, this._pose)
-    this.updatePose(p)
+  
+  updateSize(width, height) {
+    this._resolutions[0] = width;
+    this._resolutions[1] = height;
   }
-  moveZ(d){
-    let r = PGA3D.extractRotor(this._pose)
-    let v = PGA3D.applyMotorToPoint([0,0,d], r)
-    let t = PGA3D.createTranslator(v[0], v[1], v[2])
-    let p = PGA3D.geometricProduct(t, this._pose)
-    this.updatePose(p)
+
+  moveX(d) {
+    // TODO: write code to move the camera in the x-direction
+    
   }
-  rotateX(a){
-    let axis = PGA3D.applyMotorToDir([1,0,0], this._pose)
-    let pos = PGA3D.applyMotorToPoint([0,0,0], this._pose)
-    let r = PGA3D.createRotor(a, axis[0], axis[1], axis[2], pos[0], pos[1], pos[2])
-    let p = PGA3D.geometricProduct(this._pose, r)
-    this.updatePose(p)
+  
+  moveY(d) {
+    // TODO: write code to move the camera in the y-direction
+    
   }
-  rotateY(a){
-    let axis = PGA3D.applyMotorToDir([0,1,0], this._pose)
-    let pos = PGA3D.applyMotorToPoint([0,0,0], this._pose)
-    let r = PGA3D.createRotor(a, axis[0], axis[1], axis[2], pos[0], pos[1], pos[2])
-    let p = PGA3D.geometricProduct(this._pose, r)
-    this.updatePose(p)
+  
+  moveZ(d) {
+    // TODO: write code to move the camera in the z-direction
+    
   }
-  rotateZ(a){
-    let axis = PGA3D.applyMotorToDir([0,0,1], this._pose)
-    let pos = PGA3D.applyMotorToPoint([0,0,0], this._pose)
-    let r = PGA3D.createRotor(a, axis[0], axis[1], axis[2], pos[0], pos[1], pos[2])
-    let p = PGA3D.geometricProduct(this._pose, r)
-    this.updatePose(p)
+  
+  rotateX(d) {
+    // TODO: write code to rotate the camera along its x-axis
+    
+    
   }
-  changeFocalX(x){
-    this._focal[0] += x
-    if(this._focal[0] < 0.01) this._focal[0] = 0.01
+  
+  rotateY(d) {
+    // TODO: write code to rotate the camera along its y-axis
+    
   }
-  changeFocalY(y){
-    this._focal[1] += y
-    if(this._focal[1] < 0.01) this._focal[1] = 0.01
+  
+  rotateZ(d) {
+    // TODO: write code to rotate the camera along its z-axis
+    
+    
   }
 }

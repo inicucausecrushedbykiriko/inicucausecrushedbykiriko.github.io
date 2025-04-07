@@ -20,186 +20,259 @@
  *                                measures that legally restrict others from doing
  *                                anything the license permits.
  */
-struct CameraPose {
-  pose : array<vec4<f32>, 4>,
-  focal : vec2<f32>,
-  res : vec2<f32>,
-};
 
-struct BoxData {
-  pose : array<vec4<f32>, 2>,
-  scales : vec4<f32>,
-  front : array<vec4<f32>, 4>,
-  back : array<vec4<f32>, 4>,
-  left : array<vec4<f32>, 4>,
-  right : array<vec4<f32>, 4>,
-  top : array<vec4<f32>, 4>,
-  down : array<vec4<f32>, 4>,
-};
-
-@group(0) @binding(0) var<uniform> cameraPose : CameraPose;
-@group(0) @binding(1) var<uniform> boxData : BoxData;
-@group(0) @binding(2) var outTexture : texture_storage_2d<rgba8unorm, write>;
-
-fn rotateX(p: vec3<f32>, a: f32) -> vec3<f32> {
-  let c = cos(a);
-  let s = sin(a);
-  return vec3<f32>(p.x, p.y * c - p.z * s, p.y * s + p.z * c);
-}
-fn rotateY(p: vec3<f32>, a: f32) -> vec3<f32> {
-  let c = cos(a);
-  let s = sin(a);
-  return vec3<f32>(p.x * c + p.z * s, p.y, -p.x * s + p.z * c);
-}
-fn rotateZ(p: vec3<f32>, a: f32) -> vec3<f32> {
-  let c = cos(a);
-  let s = sin(a);
-  return vec3<f32>(p.x * c - p.y * s, p.x * s + p.y * c, p.z);
+// struct to store a 3D Math pose
+struct Pose {
+  pos: vec4f,
+  angles: vec4f,
 }
 
-// Inverse transform functions for the camera pose
-fn inverseCameraPoseToPoint(pt: vec3<f32>) -> vec3<f32> {
-  let tx = cameraPose.pose[0].x;
-  let ty = cameraPose.pose[0].y;
-  let tz = cameraPose.pose[0].z;
-  let rx = cameraPose.pose[1].x;
-  let ry = cameraPose.pose[1].y;
-  let rz = cameraPose.pose[1].z;
-  var p = pt - vec3<f32>(tx, ty, tz);
-  p = rotateZ(p, -rz);
-  p = rotateY(p, -ry);
-  p = rotateX(p, -rx);
-  return p;
-}
-fn inverseCameraPoseToDir(dir: vec3<f32>) -> vec3<f32> {
-  let rx = cameraPose.pose[1].x;
-  let ry = cameraPose.pose[1].y;
-  let rz = cameraPose.pose[1].z;
-  var d = dir;
-  d = rotateZ(d, -rz);
-  d = rotateY(d, -ry);
-  d = rotateX(d, -rx);
-  return d;
+// this function translates a 3d point by (dx, dy, dz)
+fn translate(pt: vec3f, dx: f32, dy: f32, dz: f32) -> vec3f {
+  return vec3f(pt[0] + dx, pt[1] + dy, pt[2] + dz);
 }
 
-// Inverse transform functions for the box (object) pose
-fn inverseBoxPoseToPoint(pt: vec3<f32>) -> vec3<f32> {
-  let tx = boxData.pose[0].x;
-  let ty = boxData.pose[0].y;
-  let tz = boxData.pose[0].z;
-  let rx = boxData.pose[1].x;
-  let ry = boxData.pose[1].y;
-  let rz = boxData.pose[1].z;
-  var p = pt - vec3<f32>(tx, ty, tz);
-  p = rotateZ(p, -rz);
-  p = rotateY(p, -ry);
-  p = rotateX(p, -rx);
-  return p;
-}
-fn inverseBoxPoseToDir(dir: vec3<f32>) -> vec3<f32> {
-  let rx = boxData.pose[1].x;
-  let ry = boxData.pose[1].y;
-  let rz = boxData.pose[1].z;
-  var d = dir;
-  d = rotateZ(d, -rz);
-  d = rotateY(d, -ry);
-  d = rotateX(d, -rx);
-  return d;
-}
-
-fn intersectBox(ro: vec3<f32>, rd: vec3<f32>) -> vec2<f32> {
-  var tMin = 1e9;
-  var chosenFace = 0;
-  let faces = array<array<vec4<f32>, 4>, 6>(
-    array<vec4<f32>, 4>(boxData.front[0], boxData.front[1], boxData.front[2], boxData.front[3]),
-    array<vec4<f32>, 4>(boxData.back[0], boxData.back[1], boxData.back[2], boxData.back[3]),
-    array<vec4<f32>, 4>(boxData.left[0], boxData.left[1], boxData.left[2], boxData.left[3]),
-    array<vec4<f32>, 4>(boxData.right[0], boxData.right[1], boxData.right[2], boxData.right[3]),
-    array<vec4<f32>, 4>(boxData.top[0], boxData.top[1], boxData.top[2], boxData.top[3]),
-    array<vec4<f32>, 4>(boxData.down[0], boxData.down[1], boxData.down[2], boxData.down[3])
-  );
-  for(var i: i32 = 0; i < 6; i = i + 1) {
-    let r = quadRayHitCheck(faces[i][0], faces[i][1], faces[i][2], faces[i][3], ro, rd);
-    if(r.x > 0.0 && r.x < tMin) {
-      tMin = r.x;
-      chosenFace = i + 1;
+// this function rotates a 3d point along the x/y/z-axis for angle
+// axis is either 0, 1, or 2 for x-axis, y-axis, or z-axis
+// angle is in rad
+fn rotate(pt: vec3f, axis: i32, angle: f32) -> vec3f {
+  let c = cos(angle);
+  let s = sin(angle);
+  switch (axis) {
+    case 0: { // x-axis
+      // y'=ycosθ−zsinθ, z'=ysinθ+zcosθ
+      return vec3f(pt[0], pt[1] * c - pt[2] * s, pt[1] * s + pt[2] * c);
+    }
+    case 1: {// y-axis
+      // x'=xcosθ+zsinθ, z'=−xsinθ+zcosθ
+      return vec3f(pt[0] * c + pt[2] * s, pt[1], -pt[0] * s + pt[2] * c);
+    }
+    case 2: {// z-axis
+      // x'=xcosθ−ysinθ, y'=xsinθ+ycosθ
+      return vec3f(pt[0] * c - pt[1] * s, pt[0] * s + pt[1] * c, pt[2]);
+    }
+    default: {
+      return pt;
     }
   }
-  return vec2<f32>(tMin, f32(chosenFace));
 }
 
-fn quadRayHitCheck(q0: vec4<f32>, q1: vec4<f32>, q2: vec4<f32>, q3: vec4<f32>, ro: vec3<f32>, rd: vec3<f32>) -> vec2<f32> {
-  let p0 = q0.xyz;
-  let p1 = q1.xyz;
-  let p2 = q2.xyz;
-  let p3 = q3.xyz;
-  let n = normalize(cross(p1 - p0, p2 - p0));
-  let denom = dot(n, rd);
-  if (abs(denom) < 1e-6) { return vec2<f32>(-1.0, 0.0); }
-  let t = dot(n, p0 - ro) / denom;
-  if (t < 0.0) { return vec2<f32>(-1.0, 0.0); }
-  let hitPos = ro + rd * t;
-  let triA = length(cross(p1 - p0, p2 - p0)) + length(cross(p2 - p0, p3 - p0));
-  let area1 = length(cross(p1 - hitPos, p0 - hitPos)) +
-              length(cross(p2 - hitPos, p1 - hitPos)) +
-              length(cross(p3 - hitPos, p2 - hitPos)) +
-              length(cross(p0 - hitPos, p3 - hitPos));
-  if (area1 > triA + 1e-3) { return vec2<f32>(-1.0, 0.0); }
-  return vec2<f32>(t, 0.0);
+// this function applies a pose to transform a point
+fn applyPoseToPoint(pt: vec3f, pose: Pose) -> vec3f {
+  var out = rotate(pt, 0, pose.angles.x);
+  out = rotate(out, 1, pose.angles.y);
+  out = rotate(out, 2, pose.angles.z);
+  out = translate(out, pose.pos.x, pose.pos.y, pose.pos.z);
+  return out;
 }
 
-fn assignColor(px: vec2<u32>, t: f32, faceId: i32) {
-  var col = vec4<f32>(0.0, 0.0, 0.0, 1.0);
-  if(faceId == 1){ col = vec4<f32>(1.0, 0.0, 0.0, 1.0); }
-  else if(faceId == 2){ col = vec4<f32>(0.0, 1.0, 0.0, 1.0); }
-  else if(faceId == 3){ col = vec4<f32>(0.0, 0.0, 1.0, 1.0); }
-  else if(faceId == 4){ col = vec4<f32>(1.0, 1.0, 0.0, 1.0); }
-  else if(faceId == 5){ col = vec4<f32>(1.0, 0.0, 1.0, 1.0); }
-  else if(faceId == 6){ col = vec4<f32>(0.0, 1.0, 1.0, 1.0); }
-  textureStore(outTexture, px, col);
+// this function applies a pose to transform a direction
+fn applyPoseToDir(dir: vec3f, pose: Pose) -> vec3f {
+  var out = rotate(dir, 0, pose.angles.x);
+  out = rotate(out, 1, pose.angles.y);
+  out = rotate(out, 2, pose.angles.z);
+  return out;
 }
 
-@compute @workgroup_size(16, 16)
-fn computeOrthogonalMain(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let dim = textureDimensions(outTexture);
-  if(gid.x >= dim.x || gid.y >= dim.y){ return; }
-  let uv = vec2<f32>(gid.xy);
-  let sz = cameraPose.res;
-  let pxSize = 2.0 / sz;
-  let x = (uv.x + 0.5) * pxSize.x - 1.0;
-  let y = (uv.y + 0.5) * pxSize.y - 1.0;
-  // Generate ray in camera space (orthogonal)
-  var ro = vec3<f32>(x, y, 0.0);
-  var rd = vec3<f32>(0.0, 0.0, 1.0);
-  // Transform ray from camera space to world space
-  ro = inverseCameraPoseToPoint(ro);
-  rd = normalize(inverseCameraPoseToDir(rd));
-  // Then transform from world space into object (box) space
-  ro = inverseBoxPoseToPoint(ro);
-  rd = normalize(inverseBoxPoseToDir(rd));
-  let r = intersectBox(ro, rd);
-  assignColor(vec2<u32>(gid.xy), r.x, i32(r.y));
+// this function applies a reverse pose to transform a point
+fn applyReversePoseToPoint(pt: vec3f, pose: Pose) -> vec3f {
+  var out = translate(pt, -pose.pos.x, -pose.pos.y, -pose.pos.z);
+  out = rotate(out, 2, -pose.angles.z);
+  out = rotate(out, 1, -pose.angles.y);
+  out = rotate(out, 0, -pose.angles.x);
+  return out;
 }
 
-@compute @workgroup_size(16, 16)
-fn computeProjectiveMain(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let dim = textureDimensions(outTexture);
-  if(gid.x >= dim.x || gid.y >= dim.y){ return; }
-  let uv = vec2<f32>(gid.xy);
-  let sz = cameraPose.res;
-  let px = (uv.x + 0.5) / sz.x * 2.0 - 1.0;
-  let py = (uv.y + 0.5) / sz.y * 2.0 - 1.0;
-  let fx = px / cameraPose.focal.x;
-  let fy = py / cameraPose.focal.y;
-  // Generate ray in camera space (projective)
-  var ro = vec3<f32>(0.0, 0.0, 0.0);
-  var rd = normalize(vec3<f32>(fx, fy, 1.0));
-  // Transform ray from camera space to world space
-  ro = inverseCameraPoseToPoint(ro);
-  rd = normalize(inverseCameraPoseToDir(rd));
-  // Then transform from world space into object (box) space
-  ro = inverseBoxPoseToPoint(ro);
-  rd = normalize(inverseBoxPoseToDir(rd));
-  let r = intersectBox(ro, rd);
-  assignColor(vec2<u32>(gid.xy), r.x, i32(r.y));
+// this function applies a reverse pose to transform a direction
+fn applyReversePoseToDir(dir: vec3f, pose: Pose) -> vec3f {
+  var out = rotate(dir, 2, -pose.angles.z);
+  out = rotate(out, 1, -pose.angles.y);
+  out = rotate(out, 0, -pose.angles.x);
+  return out;
+}
+
+// define a constant
+const EPSILON : f32 = 0.00000001;
+
+// struct to store camera
+struct Camera {
+  pose: Pose,
+  focal: vec2f,
+  res: vec2f,
+}
+
+// struct to store a quad vertices
+struct Quad {
+  ll: vec4f, // lower left
+  lr: vec4f, // lower right
+  ur: vec4f, // upper right
+  ul: vec4f, // upper left
+}
+
+// struct to store the box
+struct Box {
+  pose: Pose,     // the model pose of the box
+  scale: vec4f,           // the scale of the box
+  faces: array<Quad, 6>,  // six faces: front, back, left, right, top, down
+}
+
+// binding the camera pose
+@group(0) @binding(0) var<uniform> cameraPose: Camera ;
+// binding the box
+@group(0) @binding(1) var<uniform> box: Box;
+// binding the output texture to store the ray tracing results
+@group(0) @binding(2) var outTexture: texture_storage_2d<rgba8unorm, write>;
+
+// a helper function to get the hit point of a ray to a axis-aligned quad
+fn quadRayHitCheck(s: vec3f, d: vec3f, q: Quad, ct: f32) -> vec2f {
+  // Note, the quad is axis aligned
+  // Step 1: Check if the hit point within the face
+  var nt = -1.;
+  if (abs(q.ll.z - q.ur.z) <= EPSILON) { // z is 0, i.e. front or back face
+    let t = (q.ll.z - s.z) / d.z; // compute the current hit point to the check value
+    if (t > 0) {
+      let hPt = s + t * d;
+      if (q.ll.x < hPt.x && hPt.x < q.ur.x && q.ll.y < hPt.y && hPt.y < q.ur.y) {
+        nt = t;
+      }
+    }
+  }
+  else if (abs(q.ll.y - q.ur.y) <= EPSILON) { // y is 0, i.e. top or down face
+    let t = (q.ll.y - s.y) / d.y; // compute the current hit point to the check value
+    if (t > 0) {
+      let hPt = s + t * d;
+      if (q.ll.x < hPt.x && hPt.x < q.ur.x && q.ll.z < hPt.z && hPt.z < q.ur.z) {
+        nt = t;
+      }
+    }
+  }
+  else if (abs(q.ll.x - q.ur.x) <= EPSILON) { // x is 0, i.e. left or right face
+    let t = (q.ll.x - s.x) / d.x; // compute the current hit point to the check value
+    if (t > 0) {
+      let hPt = s + t * d;
+      if (q.ll.y < hPt.y && hPt.y < q.ur.y && q.ll.z < hPt.z && hPt.z < q.ur.z) {
+        nt = t;
+      }
+    }
+  }
+  
+  // return the hit cases
+  if (nt < 0) {
+    return vec2f(ct, -1); // Case 1: the ray has already passed the face, no hit
+  }
+  else if (ct < 0) {
+    return vec2f(nt, 1.); // Case 2: the first hit is nt, and say it hits the new face
+  }
+  else {
+    if (nt < ct) {
+      return vec2f(nt, 1.); // Case 3: the closer is nt, and say it hits the new face first
+    }
+    else {
+      return vec2f(ct, -1.); // Case 4: the closer is ct, and say it hits the old face first
+    }
+  }
+}
+
+// a function to transform the direction to the model coordiantes
+fn transformDir(d: vec3f) -> vec3f {
+  // transform the direction using the camera pose
+  var out = applyPoseToDir(d, cameraPose.pose);
+  // transform it using the object pose if you have any. Here we assume no object pose
+  return out;
+}
+
+// a function to transform the start pt to the model coordiantes
+fn transformPt(pt: vec3f) -> vec3f {
+  // transform the point using the camera pose
+  var out = applyPoseToPoint(pt, cameraPose.pose);
+  // transform it using the object pose if you have any. Here we assume no object pose
+  return out;
+}
+
+// a function to compute the ray box intersection
+fn rayBoxIntersection(s: vec3f, d: vec3f) -> vec2f { // output is (t, idx)
+  // t is the hit value, idx is the fact it hits
+  // here we have six planes to check and we keep the cloest hit point
+  var t = -1.;
+  var idx = -1.;
+  for (var i = 0; i < 6; i++) {
+    let info = quadRayHitCheck(s, d, box.faces[i], t);
+    if (info.y > 0) {
+      t = info.x;
+      idx = f32(i);
+    }
+  }
+  return vec2f(t, idx);
+}
+
+// a function to asign the pixel color
+fn assignColor(uv: vec2i, t: f32, idx: i32) {
+  var color: vec4f;
+  if (t > 0) { // hit 
+    switch(idx) {
+      case 0: { //front
+        color = vec4f(232.f/255, 119.f/255, 34.f/255, 1.); // Bucknell Orange 1
+        break;
+      }
+      case 1: { //back
+        color = vec4f(255.f/255, 163.f/255, 0.f/255, 1.); // Bucknell Orange 2
+        break;
+      }
+      case 2: { //left
+        color = vec4f(0.f/255, 130.f/255, 186.f/255, 1.); // Bucknell Blue 2
+        break;
+      }
+      case 3: { //right
+        color = vec4f(89.f/255, 203.f/255, 232.f/255, 1.); // Bucknell Blue 3
+        break;
+      }
+      case 4: { //top
+        color = vec4f(217.f/255, 217.f/255, 214.f/255, 1.); // Bucknell gray 1
+        break;
+      }
+      case 5: { //down
+        color = vec4f(167.f/255, 168.f/255, 170.f/255, 1.); // Bucknell gray 2
+        break;
+      }
+      default: {
+        color = vec4f(0.f/255, 0.f/255, 0.f/255, 1.); // Black
+        break;
+      }
+    }
+  }
+  else { // no hit
+    color = vec4f(0.f/255, 56.f/255, 101.f/255, 1.); // Bucknell Blue
+  }
+  textureStore(outTexture, uv, color);  
+}
+
+@compute
+@workgroup_size(16, 16)
+fn computeOrthogonalMain(@builtin(global_invocation_id) global_id: vec3u) {
+  // get the pixel coordiantes
+  let uv = vec2i(global_id.xy);
+  let texDim = vec2i(textureDimensions(outTexture));
+  if (uv.x < texDim.x && uv.y < texDim.y) {
+    // compute the pixel size
+    let psize = vec2f(2, 2) / cameraPose.res.xy;
+    // orthogonal camera ray sent from each pixel center at z = 0
+    var spt = vec3f((f32(uv.x) + 0.5) * psize.x - 1, (f32(uv.y) + 0.5) * psize.y - 1, 0);
+    var rdir = vec3f(0, 0, 1);
+    // apply transformation
+    spt = transformPt(spt);
+    rdir = transformDir(rdir);
+    // compute the intersection to the object
+    var hitInfo = rayBoxIntersection(spt, rdir);
+    // assign colors
+    assignColor(uv, hitInfo.x, i32(hitInfo.y));
+  }
+}
+
+@compute
+@workgroup_size(16, 16)
+fn computeProjectiveMain(@builtin(global_invocation_id) global_id: vec3u) {
+  // TODO: write code to generate projection camera ray and trace the ray to assign the pixel color
+  // This should be very similar to the orthogonal one above
+  
+  
 }
