@@ -31,38 +31,70 @@ import StandardTextObject from '/quest8/lib/DSViz/StandardTextObject.js'
 import RayTracingBoxLightObject from '/quest8/lib/DSViz/RayTracingBoxLightObject2.js'
 import Camera from '/quest8/lib/Viz/3DCamera2.js'
 import PointLight from '/quest8/lib/Viz/PointLight.js'
+import DirectionalLight from '/quest8/lib/Viz/DirectionalLight.js'
+import SpotLight from '/quest8/lib/Viz/SpotLight.js'
 
 async function init() {
-  // Create a canvas tag
   const canvasTag = document.createElement('canvas');
   canvasTag.id = "renderCanvas";
   document.body.appendChild(canvasTag);
-  // Create a ray tracer
+  
   const tracer = new RayTracer(canvasTag);
   await tracer.init();
-  // Create a 3D Camera
+  
+  // Create the camera
   var camera = new Camera();
-  // set a fixed pose for the starter code demo
   camera._pose[4] = -0.25;
   camera._pose[5] = 0.25;
   camera._pose[6] = -0.25;
-  // Create an object to trace
-  var tracerObj = new RayTracingBoxLightObject(tracer._device, tracer._canvasFormat, camera);
+  
+  const tracerObj = new RayTracingBoxLightObject(tracer._device, tracer._canvasFormat, camera);
   await tracer.setTracerObject(tracerObj);
-  // Create a light object and set it to our box light object
-  // if you want to change light, you just need to change this object and upload it to the GPU by calling traceObje.updateLight(light)
-  var light = new PointLight();
-  tracerObj.updateLight(light);
-  
+
+  // FPS text object
   let fps = '??';
-  var fpsText = new StandardTextObject('fps: ' + fps);
+  let fpsText = new StandardTextObject('fps: ' + fps);
+  fpsText._textCanvas.style.top = '10px';
+
+  // Help text object
+  let help = 'Press "t" to change light mode';
+  let helpText = new StandardTextObject('Press "t" to change light mode');
+  helpText._textCanvas.style.top = '40px';
+  // Light mode text object
+  let lightMode = 0; // 0 - Point Light, 1 - Directional Light, 2 - SpotLight
+  let lightText = new StandardTextObject('Light Mode: Point Light');
+  lightText._textCanvas.style.top = '70px';
   
-  // run animation at 60 fps
-  var frameCnt = 0;
-  var tgtFPS = 60;
-  var secPerFrame = 1. / tgtFPS;
-  var frameInterval = secPerFrame * 1000;
-  var lastCalled;
+  let light = new PointLight();
+  tracerObj.updateLight(light);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 't') {
+      lightMode = (lightMode + 1) % 3; // Cycle through light modes
+      switch (lightMode) {
+        case 0:
+          light = new PointLight();
+          lightText.updateText('Light Mode: Point Light');
+          break;
+        case 1:
+          light = new DirectionalLight();
+          lightText.updateText('Light Mode: Directional Light');
+          break;
+        case 2:
+          light = new SpotLight();
+          lightText.updateText('Light Mode: Spot Light');
+          break;
+      }
+      tracerObj.updateLight(light);
+    }
+  });
+
+  let frameCnt = 0;
+  let tgtFPS = 60;
+  let secPerFrame = 1. / tgtFPS;
+  let frameInterval = secPerFrame * 1000;
+  let lastCalled;
+
   let renderFrame = () => {
     let elapsed = Date.now() - lastCalled;
     if (elapsed > frameInterval) {
@@ -72,18 +104,22 @@ async function init() {
     }
     requestAnimationFrame(renderFrame);
   };
+
   lastCalled = Date.now();
   renderFrame();
-  setInterval(() => { 
+
+  // Update FPS every second
+  setInterval(() => {
     fpsText.updateText('fps: ' + frameCnt);
     frameCnt = 0;
-  }, 1000); // call every 1000 ms
+  }, 1000);
+
   return tracer;
 }
 
-init().then( ret => {
+init().then((ret) => {
   console.log(ret);
-}).catch( error => {
+}).catch((error) => {
   const pTag = document.createElement('p');
   pTag.innerHTML = navigator.userAgent + "</br>" + error.message;
   document.body.appendChild(pTag);

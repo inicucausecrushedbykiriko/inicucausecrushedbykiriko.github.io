@@ -21,63 +21,43 @@
  *                                anything the license permits.
  */
  
-import Math3D from '/quest8/lib/Math/Math3D.js'
- 
+import Math3D from '/quest7/lib/Math/Math3D.js'
+
 export default class Camera {
   constructor(width, height) {
-    // pose has eight values
-    // First three store the current camera location [pos x, pos y, pos z] + 1 padding
-    // Second three store the current camera orientations [angle x, angle y, angle z] + 1 padding
-    // the orientation is described by the rotation along the x-, y-, and z-axis.
-    this._pose = new Float32Array(Array(8).fill(0));
-    this._focal = new Float32Array(Array(2).fill(1));
+    this._pose = new Float32Array(8).fill(0);
+    this._focal = new Float32Array(2).fill(1);
     this._resolutions = new Float32Array([width, height]);
+    this._isProjective = false;
   }
-  
   resetPose() {
     for (let i = 0; i < 8; ++i) this._pose[i] = 0;
     this._focal[0] = 1;
     this._focal[1] = 1;
   }
-  
   updatePose(newpose) {
     for (let i = 0; i < 8; ++i) this._pose[i] = newpose[i];
   }
-  
   updateSize(width, height) {
     this._resolutions[0] = width;
     this._resolutions[1] = height;
   }
-
   moveX(d) {
-    // TODO: write code to move the camera in the x-direction
-    
+    this._pose[0] += d;
   }
-  
   moveY(d) {
-    // TODO: write code to move the camera in the y-direction
-    
+    this._pose[1] += d;
   }
-  
   moveZ(d) {
-    // TODO: write code to move the camera in the z-direction
-    
+    this._pose[2] += d;
   }
-  
   rotateX(d) {
-    // TODO: write code to rotate the camera along its x-axis
-    
-    
+    this._pose[4] += d;
   }
-  
   rotateY(d) {
-    // TODO: write code to rotate the camera along its y-axis
-    
+    this._pose[5] += d;
   }
-  
   rotateZ(d) {
-    // TODO: write code to rotate the camera along its z-axis
-    
-    
+    this._pose[6] += d;
   }
 }
