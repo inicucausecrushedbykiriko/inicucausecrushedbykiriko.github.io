@@ -53,12 +53,18 @@ async function init() {
 
   let fps = '??';
   var fpsText = new StandardTextObject('fps: ' + fps);
-  let helpText = new StandardTextObject('Press "t" to toggle shadow mode');
+  let helpText = new StandardTextObject(
+    "Keys:\n" +
+    "W/S A/D R/F Move\n" +
+    "Arrows Rotate\n" +
+    "+/- Focal\n" +
+    'Press "t" to toggle shadow mode'
+  );
   helpText._textCanvas.style.top = '40px';
 
   let shadowMode = 0; // 0 - Hard Shadows, 1 - Soft Shadows
   var shadowText = new StandardTextObject('Shadow Mode: Hard Shadows');
-  shadowText._textCanvas.style.top = '70px';
+  shadowText._textCanvas.style.top = '160px';
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 't') {
@@ -74,6 +80,20 @@ async function init() {
           break;
       }
     }
+
+    const cam = tracerObj._camera;
+    if (e.key === 'w' || e.key === 'W') { cam.moveZ(-0.1); tracerObj.updateCameraPose(); }
+    if (e.key === 's' || e.key === 'S') { cam.moveZ(0.1); tracerObj.updateCameraPose(); }
+    if (e.key === 'a' || e.key === 'A') { cam.moveX(-0.1); tracerObj.updateCameraPose(); }
+    if (e.key === 'd' || e.key === 'D') { cam.moveX(0.1); tracerObj.updateCameraPose(); }
+    if (e.key === 'r' || e.key === 'R') { cam.moveY(0.1); tracerObj.updateCameraPose(); }
+    if (e.key === 'f' || e.key === 'F') { cam.moveY(-0.1); tracerObj.updateCameraPose(); }
+    if (e.key === 'ArrowUp') { cam.rotateX(-0.1); tracerObj.updateCameraPose(); }
+    if (e.key === 'ArrowDown') { cam.rotateX(0.1); tracerObj.updateCameraPose(); }
+    if (e.key === 'ArrowLeft') { cam.rotateY(0.1); tracerObj.updateCameraPose(); }
+    if (e.key === 'ArrowRight') { cam.rotateY(-0.1); tracerObj.updateCameraPose(); }
+    if (e.key === '+' || e.key === '=') { cam._focal[0] *= 1.1; cam._focal[1] *= 1.1; tracerObj.updateCameraFocal(); }
+    if (e.key === '-') { cam._focal[0] /= 1.1; cam._focal[1] /= 1.1; tracerObj.updateCameraFocal(); }
   });
 
   let frameCnt = 0;
