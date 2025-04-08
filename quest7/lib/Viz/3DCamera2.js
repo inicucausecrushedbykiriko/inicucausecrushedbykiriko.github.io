@@ -28,28 +28,36 @@ export default class Camera {
     this._pose = new Float32Array(8).fill(0);
     this._focal = new Float32Array(2).fill(1);
     this._resolutions = new Float32Array([width, height]);
-    this._mode = "orthographic"; // "orthographic", "projective", or "fishball"
+    this._isProjective = false;
   }
-  
   resetPose() {
     for (let i = 0; i < 8; ++i) this._pose[i] = 0;
     this._focal[0] = 1;
     this._focal[1] = 1;
   }
-  
   updatePose(newpose) {
     for (let i = 0; i < 8; ++i) this._pose[i] = newpose[i];
   }
-  
   updateSize(width, height) {
     this._resolutions[0] = width;
     this._resolutions[1] = height;
   }
-
-  moveX(d) { this._pose[0] += d; }
-  moveY(d) { this._pose[1] += d; }
-  moveZ(d) { this._pose[2] += d; }
-  rotateX(d) { this._pose[4] += d; }
-  rotateY(d) { this._pose[5] += d; }
-  rotateZ(d) { this._pose[6] += d; }
+  moveX(d) {
+    this._pose[0] += d;
+  }
+  moveY(d) {
+    this._pose[1] += d;
+  }
+  moveZ(d) {
+    this._pose[2] += d;
+  }
+  rotateX(d) {
+    this._pose[4] += d;
+  }
+  rotateY(d) {
+    this._pose[5] += d;
+  }
+  rotateZ(d) {
+    this._pose[6] += d;
+  }
 }

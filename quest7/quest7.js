@@ -32,49 +32,99 @@ import VolumeRenderingSimpleObject from '/quest7/lib/DSViz/VolumeRenderingSimple
 import Camera from '/quest7/lib/Viz/3DCamera2.js'
 
 async function init() {
-  // Create a canvas tag
   const canvasTag = document.createElement('canvas');
   canvasTag.id = "renderCanvas";
   document.body.appendChild(canvasTag);
-  // Create a ray tracer
   const tracer = new RayTracer(canvasTag);
   await tracer.init();
-  // Create a 3D Camera
-  var camera = new Camera();
-  // Create an object to trace
-  var tracerObj = new VolumeRenderingSimpleObject(tracer._device, tracer._canvasFormat, camera);
+  const camera = new Camera();
+  camera._isProjective = true;
+  const tracerObj = new VolumeRenderingSimpleObject(tracer._device, tracer._canvasFormat, camera);
   await tracer.setTracerObject(tracerObj);
-  
-  let fps = '??';
-  var fpsText = new StandardTextObject('fps: ' + fps);
-  
-  // run animation at 60 fps
-  var frameCnt = 0;
-  var tgtFPS = 60;
-  var secPerFrame = 1. / tgtFPS;
-  var frameInterval = secPerFrame * 1000;
-  var lastCalled;
+  let helpText = new StandardTextObject(
+    "Quest7 Pinhole Camera:\n" +
+    "W/S moves camera forward/back\n" +
+    "A/D moves camera left/right\n" +
+    "R/F moves camera up/down\n" +
+    "Arrow keys rotate camera\n" +
+    "+/- adjusts focal"
+  );
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'w' || e.key === 'W') {
+      camera.moveZ(-0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 's' || e.key === 'S') {
+      camera.moveZ(0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'a' || e.key === 'A') {
+      camera.moveX(-0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'd' || e.key === 'D') {
+      camera.moveX(0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'r' || e.key === 'R') {
+      camera.moveY(0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'f' || e.key === 'F') {
+      camera.moveY(-0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'ArrowUp') {
+      camera.rotateX(-0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'ArrowDown') {
+      camera.rotateX(0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'ArrowLeft') {
+      camera.rotateY(0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === 'ArrowRight') {
+      camera.rotateY(-0.1);
+      tracerObj.updateCameraPose();
+    }
+    if (e.key === '+' || e.key === '=') {
+      camera._focal[0] *= 1.1;
+      camera._focal[1] *= 1.1;
+      tracerObj.updateCameraFocal();
+    }
+    if (e.key === '-') {
+      camera._focal[0] /= 1.1;
+      camera._focal[1] /= 1.1;
+      tracerObj.updateCameraFocal();
+    }
+  });
+  let frameCnt = 0;
+  let tgtFPS = 60;
+  let secPerFrame = 1. / tgtFPS;
+  let frameInterval = secPerFrame * 1000;
+  let lastCalled = Date.now();
   let renderFrame = () => {
     let elapsed = Date.now() - lastCalled;
     if (elapsed > frameInterval) {
-      ++frameCnt;
+      frameCnt++;
       lastCalled = Date.now() - (elapsed % frameInterval);
       tracer.render();
     }
     requestAnimationFrame(renderFrame);
   };
-  lastCalled = Date.now();
   renderFrame();
-  setInterval(() => { 
-    fpsText.updateText('fps: ' + frameCnt);
+  setInterval(() => {
     frameCnt = 0;
-  }, 1000); // call every 1000 ms
+  }, 1000);
   return tracer;
 }
 
-init().then( ret => {
+init().then((ret) => {
   console.log(ret);
-}).catch( error => {
+}).catch((error) => {
   const pTag = document.createElement('p');
   pTag.innerHTML = navigator.userAgent + "</br>" + error.message;
   document.body.appendChild(pTag);
