@@ -25,23 +25,22 @@ import SceneObject from "/quest9/lib/DSViz/SceneObject.js"
 
 export default class RayTracingObject extends SceneObject {
   async createGeometry() {}
-  
+
   async createShaders() {
     let shaderCode = await this.loadShader("/quest9/shaders/tracenothing.wgsl");
     this._shaderModule = this._device.createShaderModule({
       label: " Shader " + this.getName(),
       code: shaderCode,
-    }); 
+    });
   }
-  
+
   updateGeometry() {}
-  
+
   async createRenderPipeline() {}
-  
+
   render(pass) {}
-  
+
   async createComputePipeline() {
-    // Create a compute pipeline that updates the image.
     this._computePipeline = this._device.createComputePipeline({
       label: "Ray Tracing Pipeline " + this.getName(),
       layout: "auto",
@@ -51,9 +50,8 @@ export default class RayTracingObject extends SceneObject {
       }
     });
   }
-  
+
   createBindGroup(outTexture) {
-    // Create a bind group
     this._bindGroup = this._device.createBindGroup({
       label: "Ray Tracing Bind Group",
       layout: this._computePipeline.getBindGroupLayout(0),
@@ -66,12 +64,10 @@ export default class RayTracingObject extends SceneObject {
     this._wgHeight = Math.ceil(outTexture.height);
   }
 
-  // Add a method to handle area light sampling for soft shadows
   calculateSoftShadows(hitPoint, lightSource) {
-    let numSamples = 16; // Number of samples for soft shadow
+    let numSamples = 16;
     let shadowIntensity = 0;
     for (let i = 0; i < numSamples; i++) {
-        // Sample random positions around the light source
         let offset = this.getRandomOffsetForLight();
         let lightPosition = lightSource.position.add(offset);
         let shadowRay = this.calculateShadowRay(hitPoint, lightPosition);
@@ -79,23 +75,30 @@ export default class RayTracingObject extends SceneObject {
             shadowIntensity += 1;
         }
     }
-    return shadowIntensity / numSamples; // Average over all samples
+    return shadowIntensity / numSamples;
   }
 
-  
+  isInShadow(shadowRay) {
+    let shadowHit = traceScene(shadowRay);  // Implement ray tracing to check for intersections
+    if (shadowHit) {
+        return true;
+    }
+    return false;
+  }
+
+  calculateShadowRay(hitPoint, lightPosition) {
+    return new Ray(hitPoint, lightPosition.sub(hitPoint).normalize());
+  }
+
   compute(pass) {
-        // Loop through all objects in the scene
     for (const object of this._sceneObjects) {
-        // Perform ray tracing for each object
         let shadowRay = this.calculateShadowRay(hitPoint, lightPosition);
         if (this.isInShadow(shadowRay)) {
-            // If the point is in shadow, skip rendering this point
             return;
         }
     }
-    // add to compute pass
-    pass.setPipeline(this._computePipeline);                // set the compute pipeline
-    pass.setBindGroup(0, this._bindGroup);                  // bind the buffer
-    pass.dispatchWorkgroups(Math.ceil(this._wgWidth / 16), Math.ceil(this._wgHeight / 16)); // dispatch
+    pass.setPipeline(this._computePipeline);
+    pass.setBindGroup(0, this._bindGroup);
+    pass.dispatchWorkgroups(Math.ceil(this._wgWidth / 16), Math.ceil(this._wgHeight / 16));
   }
 }
