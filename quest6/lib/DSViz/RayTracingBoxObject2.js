@@ -48,18 +48,31 @@ export default class RayTracingBoxObject extends RayTracingObject {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     this._device.queue.writeBuffer(this._cameraBuffer, 0, this._camera._pose);
-    this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength, this._camera._focal);
-    this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength + this._camera._focal.byteLength, this._camera._resolutions);
-    let boxBytes = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength * 6;
+    this._device.queue.writeBuffer(
+      this._cameraBuffer,
+      this._camera._pose.byteLength,
+      this._camera._focal
+    );
+    this._device.queue.writeBuffer(
+      this._cameraBuffer,
+      this._camera._pose.byteLength + this._camera._focal.byteLength,
+      this._camera._resolutions
+    );
+
+    let boxBytes = this._box._pose.byteLength +
+                   this._box._scales.byteLength +
+                   this._box._front.byteLength * 6;
     let sphereBytes = this._sphere._pose.byteLength + this._sphere._scales.byteLength;
     let cylinderBytes = this._cylinder._pose.byteLength + this._cylinder._scales.byteLength;
     let coneBytes = this._cone._pose.byteLength + this._cone._scales.byteLength;
     let ellipsoidBytes = this._ellipsoid._pose.byteLength + this._ellipsoid._scales.byteLength;
     let totalSize = boxBytes + sphereBytes + cylinderBytes + coneBytes + ellipsoidBytes;
+
     this._sceneBuffer = this._device.createBuffer({
       size: totalSize,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
+
     let offset = 0;
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._box._pose);
     offset += this._box._pose.byteLength;
@@ -77,41 +90,99 @@ export default class RayTracingBoxObject extends RayTracingObject {
     offset += this._box._top.byteLength;
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._box._down);
     offset += this._box._down.byteLength;
+
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._sphere._pose);
     offset += this._sphere._pose.byteLength;
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._sphere._scales);
     offset += this._sphere._scales.byteLength;
+
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cylinder._pose);
     offset += this._cylinder._pose.byteLength;
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cylinder._scales);
     offset += this._cylinder._scales.byteLength;
+
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cone._pose);
     offset += this._cone._pose.byteLength;
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cone._scales);
     offset += this._cone._scales.byteLength;
+
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._ellipsoid._pose);
     offset += this._ellipsoid._pose.byteLength;
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._ellipsoid._scales);
+
   }
   
   updateGeometry() {
     this._camera.updateSize(this._imgWidth, this._imgHeight);
-    this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength + this._camera._focal.byteLength, this._camera._resolutions);
+    this._device.queue.writeBuffer(
+      this._cameraBuffer,
+      this._camera._pose.byteLength + this._camera._focal.byteLength,
+      this._camera._resolutions
+    );
   }
   
-  updateBoxPose() { this._device.queue.writeBuffer(this._sceneBuffer, 0, this._box._pose); }
-  updateBoxScales() { let offset = this._box._pose.byteLength; this._device.queue.writeBuffer(this._sceneBuffer, offset, this._box._scales); }
-  updateSpherePose() { let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength * 6; this._device.queue.writeBuffer(this._sceneBuffer, offset, this._sphere._pose); }
-  updateSphereScales() { let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength * 6 + this._sphere._pose.byteLength; this._device.queue.writeBuffer(this._sceneBuffer, offset, this._sphere._scales); }
-  updateCylinderPose() { let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength * 6 + this._sphere._pose.byteLength + this._sphere._scales.byteLength; this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cylinder._pose); }
-  updateCylinderScales() { let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength * 6 + this._sphere._pose.byteLength + this._sphere._scales.byteLength + this._cylinder._pose.byteLength; this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cylinder._scales); }
-  updateConePose() { let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength * 6 + this._sphere._pose.byteLength + this._sphere._scales.byteLength + this._cylinder._pose.byteLength + this._cylinder._scales.byteLength; this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cone._pose); }
-  updateConeScales() { let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength * 6 + this._sphere._pose.byteLength + this._sphere._scales.byteLength + this._cylinder._pose.byteLength + this._cylinder._scales.byteLength + this._cone._pose.byteLength; this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cone._scales); }
-  updateEllipsoidPose() { let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength * 6 + this._sphere._pose.byteLength + this._sphere._scales.byteLength + this._cylinder._pose.byteLength + this._cylinder._scales.byteLength + this._cone._pose.byteLength + this._cone._scales.byteLength; this._device.queue.writeBuffer(this._sceneBuffer, offset, this._ellipsoid._pose); }
-  updateEllipsoidScales() { let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength * 6 + this._sphere._pose.byteLength + this._sphere._scales.byteLength + this._cylinder._pose.byteLength + this._cylinder._scales.byteLength + this._cone._pose.byteLength + this._cone._scales.byteLength + this._ellipsoid._pose.byteLength; this._device.queue.writeBuffer(this._sceneBuffer, offset, this._ellipsoid._scales); }
-  updateCameraPose() { this._device.queue.writeBuffer(this._cameraBuffer, 0, this._camera._pose); }
-  updateCameraFocal() { this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength, this._camera._focal); }
+  updateBoxPose() {
+    this._device.queue.writeBuffer(this._sceneBuffer, 0, this._box._pose);
+  }
+  updateBoxScales() {
+    let offset = this._box._pose.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._box._scales);
+  }
+  updateSpherePose() {
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._sphere._pose);
+  }
+  updateSphereScales() {
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6 + this._sphere._pose.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._sphere._scales);
+  }
+  updateCylinderPose() {
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6 +
+                 this._sphere._pose.byteLength + this._sphere._scales.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cylinder._pose);
+  }
+  updateCylinderScales() {
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6 +
+                 this._sphere._pose.byteLength + this._sphere._scales.byteLength +
+                 this._cylinder._pose.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cylinder._scales);
+  }
+  updateConePose() {
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6 +
+                 this._sphere._pose.byteLength + this._sphere._scales.byteLength +
+                 this._cylinder._pose.byteLength + this._cylinder._scales.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cone._pose);
+  }
+  updateConeScales() {
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6 +
+                 this._sphere._pose.byteLength + this._sphere._scales.byteLength +
+                 this._cylinder._pose.byteLength + this._cylinder._scales.byteLength +
+                 this._cone._pose.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cone._scales);
+  }
+  updateEllipsoidPose() {
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6 +
+                 this._sphere._pose.byteLength + this._sphere._scales.byteLength +
+                 this._cylinder._pose.byteLength + this._cylinder._scales.byteLength +
+                 this._cone._pose.byteLength + this._cone._scales.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._ellipsoid._pose);
+  }
+  updateEllipsoidScales() {
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6 +
+                 this._sphere._pose.byteLength + this._sphere._scales.byteLength +
+                 this._cylinder._pose.byteLength + this._cylinder._scales.byteLength +
+                 this._cone._pose.byteLength + this._cone._scales.byteLength +
+                 this._ellipsoid._pose.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._ellipsoid._scales);
+  }
   
+  updateCameraPose() {
+    this._device.queue.writeBuffer(this._cameraBuffer, 0, this._camera._pose);
+  }
+  updateCameraFocal() {
+    this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength, this._camera._focal);
+  }
+
   async createShaders() {
     let shaderCode = await this.loadShader("/quest6/shaders/tracebox2.wgsl");
     this._shaderModule = this._device.createShaderModule({ code: shaderCode });
@@ -122,20 +193,36 @@ export default class RayTracingBoxObject extends RayTracingObject {
         { binding: 2, visibility: GPUShaderStage.COMPUTE, storageTexture: { format: this._canvasFormat } }
       ]
     });
-    this._pipelineLayout = this._device.createPipelineLayout({ bindGroupLayouts: [this._bindGroupLayout] });
+    this._pipelineLayout = this._device.createPipelineLayout({
+      bindGroupLayouts: [this._bindGroupLayout],
+    });
   }
   
   async createComputePipeline() {
     this._computePipeline = this._device.createComputePipeline({
       layout: this._pipelineLayout,
-      compute: { module: this._shaderModule, entryPoint: "computeOrthogonalMain" }
+      compute: {
+        module: this._shaderModule,
+        entryPoint: "computeOrthogonalMain",
+      }
     });
     this._computeProjectivePipeline = this._device.createComputePipeline({
       layout: this._pipelineLayout,
-      compute: { module: this._shaderModule, entryPoint: "computeProjectiveMain" }
+      compute: {
+        module: this._shaderModule,
+        entryPoint: "computeProjectiveMain",
+      }
+    });
+    // We'll create a fishball pipeline next:
+    this._computeFishballPipeline = this._device.createComputePipeline({
+      layout: this._pipelineLayout,
+      compute: {
+        module: this._shaderModule,
+        entryPoint: "computeFishballMain", // We'll add this in tracebox2.wgsl
+      }
     });
   }
-  
+
   createBindGroup(outTexture) {
     this._bindGroup = this._device.createBindGroup({
       layout: this._computePipeline.getBindGroupLayout(0),
@@ -150,8 +237,15 @@ export default class RayTracingBoxObject extends RayTracingObject {
   }
   
   compute(pass) {
-    if(this._camera?._isProjective) { pass.setPipeline(this._computeProjectivePipeline); }
-    else { pass.setPipeline(this._computePipeline); }
+    // Decide pipeline based on camera._mode
+    if (this._camera._mode === "projective") {
+      pass.setPipeline(this._computeProjectivePipeline);
+    } else if (this._camera._mode === "fishball") {
+      pass.setPipeline(this._computeFishballPipeline);
+    } else {
+      pass.setPipeline(this._computePipeline); // orthographic
+    }
+
     pass.setBindGroup(0, this._bindGroup);
     pass.dispatchWorkgroups(Math.ceil(this._wgWidth/16), Math.ceil(this._wgHeight/16));
   }

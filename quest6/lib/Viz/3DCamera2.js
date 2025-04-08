@@ -25,9 +25,10 @@ import Math3D from '/quest6/lib/Math/Math3D.js'
 
 export default class Camera {
   constructor(width, height) {
-    this._pose = new Float32Array(Array(8).fill(0));
-    this._focal = new Float32Array(Array(2).fill(1));
+    this._pose = new Float32Array(8).fill(0);
+    this._focal = new Float32Array(2).fill(1);
     this._resolutions = new Float32Array([width, height]);
+    this._mode = "orthographic"; // "orthographic", "projective", or "fishball"
   }
   
   resetPose() {
@@ -45,27 +46,10 @@ export default class Camera {
     this._resolutions[1] = height;
   }
 
-  moveX(d) {
-    this._pose[0] += d;
-  }
-  
-  moveY(d) {
-    this._pose[1] += d;
-  }
-  
-  moveZ(d) {
-    this._pose[2] += d;
-  }
-  
-  rotateX(d) {
-    this._pose[4] += d;
-  }
-  
-  rotateY(d) {
-    this._pose[5] += d;
-  }
-  
-  rotateZ(d) {
-    this._pose[6] += d;
-  }
+  moveX(d) { this._pose[0] += d; }
+  moveY(d) { this._pose[1] += d; }
+  moveZ(d) { this._pose[2] += d; }
+  rotateX(d) { this._pose[4] += d; }
+  rotateY(d) { this._pose[5] += d; }
+  rotateZ(d) { this._pose[6] += d; }
 }

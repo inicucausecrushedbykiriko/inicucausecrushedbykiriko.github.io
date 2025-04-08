@@ -106,7 +106,7 @@ struct Scene {
 
 @group(0) @binding(0) var<uniform> cameraPose: Camera;
 @group(0) @binding(1) var<uniform> scene: Scene;
-@group(0) @binding(2) var outTexture: texture_storage_2d<rgba8unorm,write>;
+@group(0) @binding(2) var outTexture: texture_storage_2d<rgba8unorm, write>;
 
 fn quadRayHitCheck(s: vec3f, d: vec3f, q: Quad, currentT: f32) -> vec2f {
   var nt = -1.0;
@@ -412,6 +412,76 @@ fn computeOrthogonalMain(@builtin(global_invocation_id) gid: vec3u) {
     assignColor(uv, finalT, i32(fIdx));
   }
 }
+
+@compute
+@workgroup_size(16,16)
+fn computeFishballMain(@builtin(global_invocation_id) gid: vec3u) {
+  let uv = vec2i(gid.xy);
+  let texDim = vec2i(textureDimensions(outTexture));
+  if (uv.x < texDim.x && uv.y < texDim.y) {
+    let xNdc = (f32(uv.x)+0.5) / cameraPose.res.x * 2.0 - 1.0;
+    let yNdc = (f32(uv.y)+0.5) / cameraPose.res.y * 2.0 - 1.0;
+    let r = length(vec2f(xNdc, yNdc));
+    if (r>1.0) {
+      textureStore(outTexture, uv, vec4f(0.0,0.0,0.0,1.0));
+      return;
+    }
+    // simple equisolid model => angle = π/2 * r
+    // or something simpler => z = sqrt(1.0 - r*r)
+    // for demonstration:
+    let angle = r * 1.5708; // π/2
+    let zVal = cos(angle);
+    let scale = sin(angle)/r; 
+    var dir = vec3f(xNdc*scale, yNdc*scale, zVal);
+
+    // transform the ray
+    let startPt = vec3f(0.,0.,0.);
+    // same intersection logic
+    // we do the same shape checking as projective
+    let rb = transformRayForBox(startPt, dir);
+    let boxHit = rayBoxIntersection(rb[0], rb[1]);
+    let rs = transformRayForSphere(startPt, dir);
+    let sT = raySphereIntersection(rs[0], rs[1], scene.sphereScale.x);
+    let rc = transformRayForCylinder(startPt, dir);
+    let cT = rayCylinderIntersection(rc[0], rc[1], scene.cylinderScale.x, scene.cylinderScale.y);
+    let rcone = transformRayForCone(startPt, dir);
+    let coneInfo = rayConeIntersection(rcone[0], rcone[1], scene.coneScale.x, scene.coneScale.y);
+    let re = transformRayForEllipsoid(startPt, dir);
+    let rad = vec3f(scene.ellipsoidScale.x, scene.ellipsoidScale.y, scene.ellipsoidScale.z);
+    let eT = rayEllipsoidIntersection(re[0], re[1], rad);
+
+    var finalT = -1.0;
+    var fIdx = -1.0;
+    if (boxHit.x>0.0 && (sT<0.0 || boxHit.x<sT) &&
+        (cT<0.0 || boxHit.x<cT) && (coneInfo.x<0.0 || boxHit.x<coneInfo.x) &&
+        (eT<0.0 || boxHit.x<eT)) {
+      finalT = boxHit.x; fIdx = boxHit.y;
+    }
+    if (sT>0.0 && (finalT<0.0 || sT<finalT) &&
+        (cT<0.0 || sT<cT) && (coneInfo.x<0.0 || sT<coneInfo.x) &&
+        (eT<0.0 || sT<eT)) {
+      finalT = sT; fIdx = 6.0;
+    }
+    if (cT>0.0 && (finalT<0.0 || cT<finalT) &&
+        (sT<0.0 || cT<sT) && (coneInfo.x<0.0 || cT<coneInfo.x) &&
+        (eT<0.0 || cT<eT)) {
+      finalT = cT; fIdx = 7.0;
+    }
+    if (coneInfo.x>0.0 && (finalT<0.0 || coneInfo.x<finalT) &&
+        (sT<0.0 || coneInfo.x<sT) && (cT<0.0 || coneInfo.x<cT) &&
+        (eT<0.0 || coneInfo.x<eT)) {
+      finalT = coneInfo.x; fIdx = coneInfo.y;
+    }
+    if (eT>0.0 && (finalT<0.0 || eT<finalT) &&
+        (sT<0.0 || eT<sT) && (cT<0.0 || eT<cT) &&
+        (coneInfo.x<0.0 || eT<coneInfo.x)) {
+      finalT = eT; fIdx = 10.0;
+    }
+
+    assignColor(vec2i(uv), finalT, i32(fIdx));
+  }
+}
+
 
 @compute
 @workgroup_size(16,16)
