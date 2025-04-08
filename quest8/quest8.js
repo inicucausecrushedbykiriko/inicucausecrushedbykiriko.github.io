@@ -57,16 +57,22 @@ async function init() {
   fpsText._textCanvas.style.top = '10px';
 
   // Help text object
-  let help = 'Press "t" to change light mode';
-  let helpText = new StandardTextObject('Press "t" to change light mode');
+  let help = 'Press "t" to change light mode, "s" to change shading mode';
+  let helpText = new StandardTextObject('Press "t" to change light mode, "s" to change shading mode');
   helpText._textCanvas.style.top = '40px';
+
   // Light mode text object
   let lightMode = 0; // 0 - Point Light, 1 - Directional Light, 2 - SpotLight
   let lightText = new StandardTextObject('Light Mode: Point Light');
   lightText._textCanvas.style.top = '70px';
-  
+
   let light = new PointLight();
   tracerObj.updateLight(light);
+
+  // Shading mode text object
+  let shadingMode = 0; // 0 - Lambertian, 1 - Phong, 2 - Tone
+  let shadingText = new StandardTextObject('Shading Mode: Lambertian');
+  shadingText._textCanvas.style.top = '100px';
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 't') {
@@ -86,6 +92,22 @@ async function init() {
           break;
       }
       tracerObj.updateLight(light);
+    }
+
+    if (e.key === 's') {
+      shadingMode = (shadingMode + 1) % 3; // Cycle through shading modes
+      switch (shadingMode) {
+        case 0:
+          shadingText.updateText('Shading Mode: Lambertian');
+          break;
+        case 1:
+          shadingText.updateText('Shading Mode: Phong');
+          break;
+        case 2:
+          shadingText.updateText('Shading Mode: Tone');
+          break;
+      }
+      tracerObj.updateShadingMode(shadingMode);
     }
   });
 

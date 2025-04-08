@@ -26,7 +26,7 @@ struct Pose {
   pos: vec4f,
   angles: vec4f,
 }
-
+ 
 // this function translates a 3d point by (dx, dy, dz)
 fn translate(pt: vec3f, dx: f32, dy: f32, dz: f32) -> vec3f {
   return vec3f(pt[0] + dx, pt[1] + dy, pt[2] + dz);
