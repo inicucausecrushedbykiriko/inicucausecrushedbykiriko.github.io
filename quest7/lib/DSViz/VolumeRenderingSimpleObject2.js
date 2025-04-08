@@ -21,59 +21,75 @@
  *                                anything the license permits.
  */
 
-import RayTracingObject from "/quest7/lib/DSViz/RayTracingObject.js"
-import VolumeData from "/quest7/lib/DS/VolumeData.js"
+import RayTracingObject from "/quest7/lib/DSViz/RayTracingObject.js";
+import VolumeData, { ProceduralVolumeData } from "/quest7/lib/DS/VolumeData.js";
 
 export default class VolumeRenderingSimpleObject extends RayTracingObject {
-  constructor(device, canvasFormat, camera) {
+  constructor(device, canvasFormat, camera, volumeMode = 0) {
     super(device, canvasFormat);
-    this._volume = new VolumeData('/quest7/assets/brainweb-t1-1mm-pn0-rf0.raws');
     this._camera = camera;
+
+    if (volumeMode === 0) {
+      this._volume = new VolumeData('/quest7/assets/brainweb-pd-1mm-pn0-rf0.raws');
+    } else if (volumeMode === 1) {
+      this._volume = new VolumeData('/quest7/assets/brainweb-t1-1mm-pn0-rf0.raws');
+    } else if (volumeMode === 2) {
+      this._volume = new VolumeData('/quest7/assets/brainweb-t2-1mm-pn0-rf0.raws');
+    } else {
+      this._volume = new ProceduralVolumeData();
+    }
   }
-  
+
   async createGeometry() {
-    await this._volume.init();
-    // Create camera buffer to store the camera pose and scale in GPU
+    if (this._volume.init) {
+      await this._volume.init();
+    }
+
+    const poseSize = this._camera._pose.byteLength;
+    const focalSize = this._camera._focal.byteLength;
+    const resSize = this._camera._resolutions.byteLength;
+    
     this._cameraBuffer = this._device.createBuffer({
       label: "Camera " + this.getName(),
-      size: this._camera._pose.byteLength + this._camera._focal.byteLength + this._camera._resolutions.byteLength,
+      size: poseSize + focalSize + resSize,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    }); 
-    // Copy from CPU to GPU - both pose and scales
+    });
     this._device.queue.writeBuffer(this._cameraBuffer, 0, this._camera._pose);
-    this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength, this._camera._focal);
-    this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength + this._camera._focal.byteLength, this._camera._resolutions);
-    // Create uniform buffer to store the volume dimensions and voxel sizes in GPU
+    this._device.queue.writeBuffer(this._cameraBuffer, poseSize, this._camera._focal);
+    this._device.queue.writeBuffer(this._cameraBuffer, poseSize + focalSize, this._camera._resolutions);
+    
     this._volumeBuffer = this._device.createBuffer({
       label: "Volume " + this.getName(),
-      size: (this._volume._dims.length + this._volume._sizes.length + 2) * Float32Array.BYTES_PER_ELEMENT,
+      size: (this._volume.dims.length + this._volume.sizes.length + 2) * 4,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    }); 
-    // Copy from CPU to GPU - both dims and sizes
-    this._device.queue.writeBuffer(this._volumeBuffer, 0, new Float32Array([... this._volume._dims, 0, ...this._volume._sizes, 0]));
-    // Create data buffer to store the volume data in GPU
+    });
+    this._device.queue.writeBuffer(
+      this._volumeBuffer,
+      0,
+      new Float32Array([...this._volume.dims, 0, ...this._volume.sizes, 0])
+    );
+    
     this._dataBuffer = this._device.createBuffer({
       label: "Data " + this.getName(),
-      size: this._volume._data.length * Float32Array.BYTES_PER_ELEMENT,
+      size: this._volume.data.length * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    // Copy from CPU to GPU
-    // Note, here we make use of the offset to copy them over one by one
-    this._device.queue.writeBuffer(this._dataBuffer, 0, new Float32Array(this._volume._data));
+    this._device.queue.writeBuffer(this._dataBuffer, 0, new Float32Array(this._volume.data));
   }
-  
+
   updateGeometry() {
-    // update the image size of the camera
     this._camera.updateSize(this._imgWidth, this._imgHeight);
-    this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength + this._camera._focal.byteLength, this._camera._resolutions);
+    const ofs = this._camera._pose.byteLength + this._camera._focal.byteLength;
+    this._device.queue.writeBuffer(this._cameraBuffer, ofs, this._camera._resolutions);
   }
-  
+
   updateCameraPose() {
     this._device.queue.writeBuffer(this._cameraBuffer, 0, this._camera._pose);
   }
-  
+
   updateCameraFocal() {
-    this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength, this._camera._focal);
+    const ofs = this._camera._pose.byteLength;
+    this._device.queue.writeBuffer(this._cameraBuffer, ofs, this._camera._focal);
   }
 
   async createShaders() {
@@ -82,35 +98,24 @@ export default class VolumeRenderingSimpleObject extends RayTracingObject {
       label: " Shader " + this.getName(),
       code: shaderCode,
     });
-    // Create the bind group layout
+    
     this._bindGroupLayout = this._device.createBindGroupLayout({
       label: "Ray Trace Volume Layout " + this.getName(),
-      entries: [{
-        binding: 0,
-        visibility: GPUShaderStage.COMPUTE,
-        buffer: {} // Camera buffer
-      }, {
-        binding: 1,
-        visibility: GPUShaderStage.COMPUTE,
-        buffer: {} // Volume buffer
-      }, {
-        binding: 2,
-        visibility: GPUShaderStage.COMPUTE,
-        buffer: { type: "read-only-storage" } // Data storage buffer
-      }, {
-        binding: 3,
-        visibility: GPUShaderStage.COMPUTE,
-        storageTexture: { format: this._canvasFormat } // texture
-      }]
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: {} },
+        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: {} },
+        { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: "read-only-storage" } },
+        { binding: 3, visibility: GPUShaderStage.COMPUTE, storageTexture: { format: this._canvasFormat } }
+      ]
     });
+
     this._pipelineLayout = this._device.createPipelineLayout({
       label: "Ray Trace Volume Pipeline Layout",
-      bindGroupLayouts: [ this._bindGroupLayout ],
+      bindGroupLayouts: [this._bindGroupLayout],
     });
   }
-  
+
   async createComputePipeline() {
-    // Create a compute pipeline that updates the image.
     this._computePipeline = this._device.createComputePipeline({
       label: "Ray Trace Volume Orthogonal Pipeline " + this.getName(),
       layout: this._pipelineLayout,
@@ -119,7 +124,7 @@ export default class VolumeRenderingSimpleObject extends RayTracingObject {
         entryPoint: "computeOrthogonalMain",
       }
     });
-    // Create a compute pipeline that updates the image.
+
     this._computeProjectivePipeline = this._device.createComputePipeline({
       label: "Ray Trace Volume Projective Pipeline " + this.getName(),
       layout: this._pipelineLayout,
@@ -131,42 +136,30 @@ export default class VolumeRenderingSimpleObject extends RayTracingObject {
   }
 
   createBindGroup(outTexture) {
-    // Create a bind group
     this._bindGroup = this._device.createBindGroup({
       label: "Ray Trace Volume Bind Group",
       layout: this._computePipeline.getBindGroupLayout(0),
       entries: [
-      {
-        binding: 0,
-        resource: { buffer: this._cameraBuffer }
-      },
-      {
-        binding: 1,
-        resource: { buffer: this._volumeBuffer }
-      },
-      {
-        binding: 2,
-        resource: { buffer: this._dataBuffer }
-      },
-      {
-        binding: 3,
-        resource: outTexture.createView()
-      }
-      ],
+        { binding: 0, resource: { buffer: this._cameraBuffer } },
+        { binding: 1, resource: { buffer: this._volumeBuffer } },
+        { binding: 2, resource: { buffer: this._dataBuffer } },
+        { binding: 3, resource: outTexture.createView() }
+      ]
     });
     this._wgWidth = Math.ceil(outTexture.width);
     this._wgHeight = Math.ceil(outTexture.height);
   }
-  
+
   compute(pass) {
-    // add to compute pass
     if (this._camera?._isProjective) {
-      pass.setPipeline(this._computeProjectivePipeline);        // set the compute projective pipeline
+      pass.setPipeline(this._computeProjectivePipeline);
+    } else {
+      pass.setPipeline(this._computePipeline);
     }
-    else {
-      pass.setPipeline(this._computePipeline);                 // set the compute orthogonal pipeline
-    }
-    pass.setBindGroup(0, this._bindGroup);                  // bind the buffer
-    pass.dispatchWorkgroups(Math.ceil(this._wgWidth / 16), Math.ceil(this._wgHeight / 16)); // dispatch
+    pass.setBindGroup(0, this._bindGroup);
+    pass.dispatchWorkgroups(
+      Math.ceil(this._wgWidth / 16),
+      Math.ceil(this._wgHeight / 16)
+    );
   }
 }

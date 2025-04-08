@@ -27,7 +27,7 @@ import VolumeData from "/quest7/lib/DS/VolumeData.js"
 export default class VolumeRenderingSimpleObject extends RayTracingObject {
   constructor(device, canvasFormat, camera) {
     super(device, canvasFormat);
-    this._volume = new VolumeData('/quest7/assets/brainweb-t1-1mm-pn0-rf0.raws');
+    this._volume = new VolumeData('/quest7/assets/brainweb-t2-1mm-pn0-rf0.raws');
     this._camera = camera;
   }
   

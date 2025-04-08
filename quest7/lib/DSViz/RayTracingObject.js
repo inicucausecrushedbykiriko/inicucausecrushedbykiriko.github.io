@@ -23,6 +23,7 @@
 
 import SceneObject from "/quest7/lib/DSViz/SceneObject.js"
 
+
 export default class RayTracingObject extends SceneObject {
   async createGeometry() {}
   

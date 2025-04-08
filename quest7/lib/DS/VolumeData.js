@@ -21,19 +21,43 @@
  *                                anything the license permits.
  */
  
-import VolumeByteIO from "/quest7/lib/IO/VolumeByteIO.js"
+import VolumeByteIO from "/quest7/lib/IO/VolumeByteIO.js";
+
+export class ProceduralVolumeData {
+  constructor(dims = [64, 64, 64], sizes = [1, 1, 1]) {
+    this._dims = dims;
+    this._sizes = sizes;
+    const n = dims[0] * dims[1] * dims[2];
+    this._data = new Float32Array(n);
+    for (let z = 0; z < dims[2]; z++) {
+      for (let y = 0; y < dims[1]; y++) {
+        for (let x = 0; x < dims[0]; x++) {
+          const idx = z * (dims[0] * dims[1]) + y * dims[0] + x;
+          const val = ((x ^ y ^ z) & 255);
+          this._data[idx] = val;
+        }
+      }
+    }
+  }
+
+  get dims() { return this._dims; }
+  get sizes() { return this._sizes; }
+  get data() { return this._data; }
+}
 
 export default class VolumeData {
-  // Note: Volume Data comes from Brainweb: https://brainweb.bic.mni.mcgill.ca
   constructor(filename) {
     this._filename = filename;
   }
-  
+
   async init() {
-    // Read volume data from file
     const [dims, sizes, data] = await VolumeByteIO.read(this._filename);
     this._dims = dims;
     this._sizes = sizes;
     this._data = data;
   }
+
+  get dims() { return this._dims; }
+  get sizes() { return this._sizes; }
+  get data() { return this._data; }
 }
