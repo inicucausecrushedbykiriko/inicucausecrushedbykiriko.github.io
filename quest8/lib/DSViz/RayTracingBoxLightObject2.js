@@ -32,7 +32,7 @@ export default class RayTracingBoxLightObject extends RayTracingObject {
     this._showTexture = showTexture;
     this._shadingMode = 0; // Default to Lambertian
   }
-  
+
   async createGeometry() {
     // Create camera buffer to store the camera pose and scale in GPU
     this._cameraBuffer = this._device.createBuffer({
@@ -44,6 +44,7 @@ export default class RayTracingBoxLightObject extends RayTracingObject {
     this._device.queue.writeBuffer(this._cameraBuffer, 0, this._camera._pose);
     this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength, this._camera._focal);
     this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength + this._camera._focal.byteLength, this._camera._resolutions);
+    
     // Create box buffer to store the box in GPU
     this._boxBuffer = this._device.createBuffer({
       label: "Box " + this.getName(),
@@ -66,16 +67,25 @@ export default class RayTracingBoxLightObject extends RayTracingObject {
     this._device.queue.writeBuffer(this._boxBuffer, offset, this._box._top);
     offset += this._box._top.byteLength;
     this._device.queue.writeBuffer(this._boxBuffer, offset, this._box._down);
+
     // Create light buffer to store the light in GPU
     this._lightBuffer = this._device.createBuffer({
       label: "Light " + this.getName(),
       size: 20 * Float32Array.BYTES_PER_ELEMENT,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     }); 
+    
+    // Create shading mode buffer to store the shading mode in GPU
+    this._shadingModeBuffer = this._device.createBuffer({
+      label: "ShadingMode " + this.getName(),
+      size: Float32Array.BYTES_PER_ELEMENT,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
   }
 
   updateShadingMode(mode) {
     this._shadingMode = mode;
+    this._device.queue.writeBuffer(this._shadingModeBuffer, 0, new Float32Array([this._shadingMode]));
   }
 
   updateGeometry() {
@@ -136,6 +146,10 @@ export default class RayTracingBoxLightObject extends RayTracingObject {
         binding: 3,
         visibility: GPUShaderStage.COMPUTE,
         buffer: {} // Light uniform buffer
+      }, {
+        binding: 4,
+        visibility: GPUShaderStage.COMPUTE,
+        buffer: {} // ShadingMode uniform buffer
       }]
     });
     this._pipelineLayout = this._device.createPipelineLayout({
@@ -143,7 +157,7 @@ export default class RayTracingBoxLightObject extends RayTracingObject {
       bindGroupLayouts: [ this._bindGroupLayout ],
     });
   }
-  
+
   async createComputePipeline() {
     this._computePipeline = this._device.createComputePipeline({
       label: "Ray Trace Box Orthogonal Pipeline " + this.getName(),
@@ -183,6 +197,10 @@ export default class RayTracingBoxLightObject extends RayTracingObject {
       {
         binding: 3,
         resource: { buffer: this._lightBuffer }
+      },
+      {
+        binding: 4,
+        resource: { buffer: this._shadingModeBuffer }
       }
       ],
     });
@@ -199,4 +217,5 @@ export default class RayTracingBoxLightObject extends RayTracingObject {
     pass.setBindGroup(0, this._bindGroup);
     pass.dispatchWorkgroups(Math.ceil(this._wgWidth / 16), Math.ceil(this._wgHeight / 16));
   }
+
 }
