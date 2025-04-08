@@ -51,7 +51,7 @@ async function init() {
   camera._focal[0] = 1/4;
   camera._focal[1] = 1/4;
   // Create a triangle mesh object
-  var mesh = new RayTracingTriangleMeshObject(tracer._device, tracer._canvasFormat, '/quest10/assets/TOSCA/wolf0.ply', camera);
+  var mesh = new RayTracingTriangleMeshObject(tracer._device, tracer._canvasFormat, '/quest10/assets/TOSCA/M.ply', camera);
   await tracer.setTracerObject(mesh);
   
   var instuctText = `z/Z: Change Trace Height (XXXXXX)

@@ -132,9 +132,27 @@ fn vertexMain(@location(0) srcpos: vec3f, @location(1) srcnormal: vec3f, @locati
   return out;
 }
 
-@fragment // this compute the color of each pixel
+
+@fragment // this computes the color of each pixel
 fn fragmentMain(@location(0) normal: vec3f) -> @location(0) vec4f {
-  // TODO: Modify the fragment shader to implement a shader model to color the mesh using the normal
-  
-  return vec4f((normal + 1) * 0.5, 1); // simple normal color
+  // Light position and intensity (you can pass these as uniform data if needed)
+  let lightPos = vec3f(1.0, 2.0, 3.0); // Example light position (x, y, z)
+  let lightIntensity = vec3f(1.0, 1.0, 1.0); // White light
+
+  // Calculate the vector from the surface point to the light source
+  let lightDir = normalize(lightPos - normal);
+
+  // Lambertian shading: calculate the diffuse term
+  let diffuse = max(dot(normal, lightDir), 0.0); // Clamp the dot product to [0, 1]
+
+  // Adjust the color based on the diffuse shading
+  // We'll vary the color depending on the diffuse intensity
+  let color = lightIntensity * diffuse;
+
+  // For a more noticeable difference, let's scale the color based on the diffuse factor
+  // You can also adjust the colors here for visual variety
+  let finalColor = vec3f(color.r * 0.1, color.g * 1.0, color.b * 2);  // Slight color variation
+
+  // Return the color with an alpha of 1 (opaque)
+  return vec4f(finalColor, 1.0);
 }
