@@ -21,8 +21,9 @@
  *                                anything the license permits.
  */
 
-import RayTracingObject from "/quest10/lib/DSViz/RayTracingObject.js"
-import TriangleMesh from "/quest10/lib/DS/TriangleMesh.js"
+import RayTracingObject from "/quest10/lib/DSViz/RayTracingObject.js";
+import TriangleMesh from "/quest10/lib/DS/TriangleMesh.js";
+import { laplacianInterpolationUniform, laplacianInterpolationEdgeLength, laplacianInterpolationArea } from '/quest10/lib/DSViz/LaplacianInterpolation.js'; // Import Laplacian interpolation functions
 
 export default class RayTracingTriangleMeshObject extends RayTracingObject {
   constructor(device, canvasFormat, filename, camera) {
@@ -30,86 +31,111 @@ export default class RayTracingTriangleMeshObject extends RayTracingObject {
     this._mesh = new TriangleMesh(filename);
     this._camera = camera;
   }
-  
+
   async createGeometry() {
-    await this._mesh.init();
+    await this._mesh.init();  // Ensure that the mesh initialization completes first
+    
+    if (!this._mesh._vertices || !this._mesh._triangles) {
+      console.error("Vertices or triangles are not properly initialized.");
+      return;
+    }
+  
     this._numV = this._mesh._numV;
     this._numT = this._mesh._numT;
     this._vProp = this._mesh._vProp;
     this._vertices = this._mesh._vertices.flat();
     this._triangles = this._mesh._triangles.flat();
-    // Create vertex buffer to store the vertices in GPU
-    this._vertexBuffer = this._device.createBuffer({
-      label: "Vertices Normals and More",
-      size: this._vertices.length * Float32Array.BYTES_PER_ELEMENT,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-      mappedAtCreation: true
-    });
+  
+    if (!this._vertices || !this._triangles) {
+      console.error("Vertices or triangles are still undefined.");
+      return;
+    }
+
     // Copy from CPU to GPU
     new Float32Array(this._vertexBuffer.getMappedRange()).set(this._vertices);
     this._vertexBuffer.unmap();
-    //this._device.queue.writeBuffer(this.vertexBuffer, 0, this.vertices);
+
     // Define vertex buffer layout - how the GPU should read the buffer
     this._vertexBufferLayout = {
       arrayStride: this._vProp.length * Float32Array.BYTES_PER_ELEMENT,
       attributes: [
-      { // vertices
-        format: "float32x3", // 32 bits, each has three coordiantes
-        offset: 0,
-        shaderLocation: 0, // position in the vertex shader
-      },
-      { // normals
-        format: "float32x3", // 32 bits, each has three coordiantes
-        offset: 3 * Float32Array.BYTES_PER_ELEMENT,
-        shaderLocation: 1, // position in the vertex shader
-      }
+        { // vertices
+          format: "float32x3", // 32 bits, each has three coordinates
+          offset: 0,
+          shaderLocation: 0, // position in the vertex shader
+        },
+        { // normals
+          format: "float32x3", // 32 bits, each has three coordinates
+          offset: 3 * Float32Array.BYTES_PER_ELEMENT,
+          shaderLocation: 1, // position in the vertex shader
+        }
       ],
     };
+
     // Create index buffer to store the triangle indices in GPU
     this._indexBuffer = this._device.createBuffer({
       label: "Indices",
       size: this._triangles.length * Uint32Array.BYTES_PER_ELEMENT,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       mappedAtCreation: true
-    }); 
+    });
+
     // Copy from CPU to GPU
     new Uint32Array(this._indexBuffer.getMappedRange()).set(this._triangles);
     this._indexBuffer.unmap();
-    //this._device.queue.writeBuffer(this.indexBuffer, 0, this.triangles);
-    
+
     // Create camera buffer to store the camera pose and scale in GPU
     this._cameraBuffer = this._device.createBuffer({
       label: "Camera " + this.getName(),
       size: this._camera._pose.byteLength + this._camera._focal.byteLength + this._camera._resolutions.byteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    }); 
+    });
+
     // Copy from CPU to GPU - both pose and scales
     this._device.queue.writeBuffer(this._cameraBuffer, 0, this._camera._pose);
     this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength, this._camera._focal);
     this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength + this._camera._focal.byteLength, this._camera._resolutions);
   }
-  
+
+  // Compute the neighbors for each vertex based on the triangles
+  computeNeighbors() {
+    let neighbors = Array(this._numV).fill().map(() => []);  // Initialize empty neighbors array
+
+    for (let i = 0; i < this._triangles.length; i += 3) {
+      const v0 = this._triangles[i];
+      const v1 = this._triangles[i + 1];
+      const v2 = this._triangles[i + 2];
+
+      // Add neighbors to each vertex of the triangle
+      neighbors[v0].push(v1, v2);
+      neighbors[v1].push(v0, v2);
+      neighbors[v2].push(v0, v1);
+    }
+
+    return neighbors;
+  }
+
   updateGeometry() {
-    // update the image size of the camera
+    // Update the geometry (e.g., camera size)
     this._camera.updateSize(this._imgWidth, this._imgHeight);
     this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength + this._camera._focal.byteLength, this._camera._resolutions);
   }
-  
+
   updateCameraPose() {
     this._device.queue.writeBuffer(this._cameraBuffer, 0, this._camera._pose);
   }
-  
+
   updateCameraFocal() {
     this._device.queue.writeBuffer(this._cameraBuffer, this._camera._pose.byteLength, this._camera._focal);
   }
-  
+
   async createShaders() {
     let shaderCode = await this.loadShader("/quest10/shaders/tracemesh2.wgsl");
     this._meshShaderModule = this._device.createShaderModule({
       label: "Ray Trace Mesh Shader",
       code: shaderCode,
-    }); 
-    
+    });
+
     // Create the bind group layout
     this._bindGroupLayout = this._device.createBindGroupLayout({
       label: "Ray Trace Mesh Layout " + this.getName(),
@@ -136,11 +162,11 @@ export default class RayTracingTriangleMeshObject extends RayTracingObject {
       bindGroupLayouts: [ this._bindGroupLayout ],
     });
   }
-  
+
   async createRenderPipeline() { }
-  
+
   render(pass) { }
-  
+
   createBindGroup(outTexture) {
     // Create a bind group
     this._bindGroup = this._device.createBindGroup({
@@ -168,7 +194,7 @@ export default class RayTracingTriangleMeshObject extends RayTracingObject {
     this._wgWidth = Math.ceil(outTexture.width);
     this._wgHeight = Math.ceil(outTexture.height);
   }
-  
+
   async createComputePipeline() {
     // Create a compute pipeline that updates the image.
     this._computePipeline = this._device.createComputePipeline({
@@ -189,16 +215,16 @@ export default class RayTracingTriangleMeshObject extends RayTracingObject {
       }
     });
   }
-    
+
   compute(pass) {
-    // add to compute pass
+    // Add to compute pass
     if (this._camera?._isProjective) {
-      pass.setPipeline(this._computeProjectivePipeline);        // set the compute projective pipeline
+      pass.setPipeline(this._computeProjectivePipeline);        // Set the compute projective pipeline
     }
     else {
-      pass.setPipeline(this._computePipeline);                 // set the compute orthogonal pipeline
+      pass.setPipeline(this._computePipeline);                 // Set the compute orthogonal pipeline
     }
-    pass.setBindGroup(0, this._bindGroup);                  // bind the buffer
-    pass.dispatchWorkgroups(Math.ceil(this._wgWidth / 16), Math.ceil(this._wgHeight / 16)); // dispatch
+    pass.setBindGroup(0, this._bindGroup);                  // Bind the buffer
+    pass.dispatchWorkgroups(Math.ceil(this._wgWidth / 16), Math.ceil(this._wgHeight / 16)); // Dispatch
   }
 }
