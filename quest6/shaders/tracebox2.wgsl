@@ -104,6 +104,8 @@ struct Scene {
   box: Box,
   spherePose: Pose,
   sphereScale: vec4f,
+  cylinderPose: Pose,
+  cylinderScale: vec4f,
 }
 
 @group(0) @binding(0) var<uniform> cameraPose: Camera;
@@ -167,11 +169,11 @@ fn raySphereIntersection(startPt: vec3f, dir: vec3f, radius: f32) -> f32 {
   let A = dot(dir, dir);
   let B = 2.0 * dot(startPt, dir);
   let C = dot(startPt, startPt) - radius * radius;
-  let discriminant = B * B - 4.0 * A * C;
-  if (discriminant < 0.0) {
+  let disc = B*B - 4.0*A*C;
+  if (disc < 0.0) {
     return -1.0;
   }
-  let sqrtD = sqrt(discriminant);
+  let sqrtD = sqrt(disc);
   let t1 = (-B - sqrtD) / (2.0 * A);
   let t2 = (-B + sqrtD) / (2.0 * A);
   var tHit = -1.0;
@@ -181,6 +183,49 @@ fn raySphereIntersection(startPt: vec3f, dir: vec3f, radius: f32) -> f32 {
     tHit = t1;
   } else if (t2 > 0.0) {
     tHit = t2;
+  }
+  return tHit;
+}
+
+fn rayCylinderIntersection(startPt: vec3f, dir: vec3f, radius: f32, halfH: f32) -> f32 {
+  let A = dir.x*dir.x + dir.z*dir.z;
+  if (A < EPSILON) {
+    return -1.0;
+  }
+  let B = 2.0*(startPt.x*dir.x + startPt.z*dir.z);
+  let C = startPt.x*startPt.x + startPt.z*startPt.z - radius*radius;
+  let disc = B*B - 4.0*A*C;
+  if (disc < 0.0) {
+    return -1.0;
+  }
+  let sqrtD = sqrt(disc);
+  let t1 = (-B - sqrtD)/(2.0*A);
+  let t2 = (-B + sqrtD)/(2.0*A);
+  var tHit = -1.0;
+  if (t1>0.0 && t2>0.0) {
+    let tcheck = min(t1, t2);
+    let yhit = startPt.y + tcheck*dir.y;
+    if (abs(yhit)<=halfH) {
+      tHit = tcheck;
+    } else {
+      let other = max(t1,t2);
+      if (other>0.0) {
+        let y2 = startPt.y + other*dir.y;
+        if (abs(y2)<=halfH) {
+          tHit = other;
+        }
+      }
+    }
+  } else if (t1>0.0) {
+    let y1 = startPt.y + t1*dir.y;
+    if (abs(y1)<=halfH) {
+      tHit = t1;
+    }
+  } else if (t2>0.0) {
+    let y2 = startPt.y + t2*dir.y;
+    if (abs(y2)<=halfH) {
+      tHit = t2;
+    }
   }
   return tHit;
 }
@@ -201,6 +246,14 @@ fn transformRayForSphere(s: vec3f, d: vec3f) -> array<vec3f,2> {
   return array<vec3f,2>(sLocal, dLocal);
 }
 
+fn transformRayForCylinder(s: vec3f, d: vec3f) -> array<vec3f,2> {
+  let sCam = applyPoseToPoint(s, cameraPose.pose);
+  let dCam = applyPoseToDir(d, cameraPose.pose);
+  let sLocal = applyReversePoseToPoint(sCam, scene.cylinderPose);
+  let dLocal = applyReversePoseToDir(dCam, scene.cylinderPose);
+  return array<vec3f,2>(sLocal, dLocal);
+}
+
 fn assignColor(uv: vec2i, t: f32, faceIndex: i32) {
   var c: vec4f;
   if (t > 0.0) {
@@ -215,14 +268,19 @@ fn assignColor(uv: vec2i, t: f32, faceIndex: i32) {
         case 5: { baseC = vec4f(167./255.,168./255.,170./255.,1.); break; }
         default: { baseC = vec4f(0.,0.,0.,1.); }
       }
-      let factor = clamp(t / 3.0, 0.0, 1.0);
+      let factor = clamp(t/3.0,0.0,1.0);
       let depthColor = mix(vec3f(1.0,0.0,0.0), vec3f(0.0,0.0,1.0), factor);
       let finalRGB = mix(baseC.xyz, depthColor, 0.6);
       c = vec4f(finalRGB,1.0);
-    } else {
-      let factor = clamp(t / 3.0, 0.0, 1.0);
+    } else if (faceIndex == 6) {
+      let factor = clamp(t/3.0,0.0,1.0);
       let depthColor = mix(vec3f(1.0,0.0,0.0), vec3f(0.0,0.0,1.0), factor);
       let finalRGB = mix(vec3f(1.0,0.0,1.0), depthColor, 0.6);
+      c = vec4f(finalRGB,1.0);
+    } else {
+      let factor = clamp(t/3.0,0.0,1.0);
+      let depthColor = mix(vec3f(1.0,1.0,0.0), vec3f(0.0,1.0,0.0), factor);
+      let finalRGB = mix(vec3f(0.0,1.0,0.0), depthColor, 0.7);
       c = vec4f(finalRGB,1.0);
     }
   } else {
@@ -237,7 +295,7 @@ fn computeOrthogonalMain(@builtin(global_invocation_id) gid: vec3u) {
   let uv = vec2i(gid.xy);
   let texDim = vec2i(textureDimensions(outTexture));
   if (uv.x < texDim.x && uv.y < texDim.y) {
-    let psize = vec2f(2.,2.) / cameraPose.res;
+    let psize = vec2f(2.,2.)/cameraPose.res;
     let startPt = vec3f(
       (f32(uv.x)+0.5)*psize.x-1.,
       (f32(uv.y)+0.5)*psize.y-1.,
@@ -248,15 +306,21 @@ fn computeOrthogonalMain(@builtin(global_invocation_id) gid: vec3u) {
     let boxHit = rayBoxIntersection(rayBox[0], rayBox[1]);
     let raySphere = transformRayForSphere(startPt, dir);
     let sT = raySphereIntersection(raySphere[0], raySphere[1], scene.sphereScale.x);
+    let rayCyl = transformRayForCylinder(startPt, dir);
+    let cT = rayCylinderIntersection(rayCyl[0], rayCyl[1], scene.cylinderScale.x, scene.cylinderScale.y);
     var finalT = -1.0;
     var idx = -1.0;
-    if (boxHit.x>0.0 && (sT<0.0 || boxHit.x<sT)) {
+    if (boxHit.x>0.0 && (sT<0.0 || boxHit.x<sT) && (cT<0.0 || boxHit.x<cT)) {
       finalT = boxHit.x;
       idx = boxHit.y;
     }
-    if (sT>0.0 && (boxHit.x<0.0 || sT<boxHit.x)) {
+    if (sT>0.0 && (finalT<0.0 || sT<finalT) && (cT<0.0 || sT<cT)) {
       finalT = sT;
       idx = 6.0;
+    }
+    if (cT>0.0 && (finalT<0.0 || cT<finalT) && (sT<0.0 || cT<sT)) {
+      finalT = cT;
+      idx = 7.0;
     }
     assignColor(uv, finalT, i32(idx));
   }
@@ -278,15 +342,21 @@ fn computeProjectiveMain(@builtin(global_invocation_id) gid: vec3u) {
     let boxHit = rayBoxIntersection(rayBox[0], rayBox[1]);
     let raySphere = transformRayForSphere(startPt, dir);
     let sT = raySphereIntersection(raySphere[0], raySphere[1], scene.sphereScale.x);
+    let rayCyl = transformRayForCylinder(startPt, dir);
+    let cT = rayCylinderIntersection(rayCyl[0], rayCyl[1], scene.cylinderScale.x, scene.cylinderScale.y);
     var finalT = -1.0;
     var idx = -1.0;
-    if (boxHit.x>0.0 && (sT<0.0 || boxHit.x<sT)) {
+    if (boxHit.x>0.0 && (sT<0.0 || boxHit.x<sT) && (cT<0.0 || boxHit.x<cT)) {
       finalT = boxHit.x;
       idx = boxHit.y;
     }
-    if (sT>0.0 && (boxHit.x<0.0 || sT<boxHit.x)) {
+    if (sT>0.0 && (finalT<0.0 || sT<finalT) && (cT<0.0 || sT<cT)) {
       finalT = sT;
       idx = 6.0;
+    }
+    if (cT>0.0 && (finalT<0.0 || cT<finalT) && (sT<0.0 || cT<sT)) {
+      finalT = cT;
+      idx = 7.0;
     }
     assignColor(uv, finalT, i32(idx));
   }

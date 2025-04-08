@@ -46,31 +46,35 @@ async function init() {
 
   let fps = '??';
   let fpsText = new StandardTextObject('fps: ' + fps);
-  let currentObject = 0; 
+  let currentObject = 0;
   let helpText = new StandardTextObject(
     "Quest6 Raytracing:\n" +
     "T - Change camera mode\n" +
     "W/S/A/D/R/F - Move Camera\n" +
     "Arrows - Rotate Camera\n" +
     "+/- - Adjust Focal (Projective)\n" +
-    "I/K/J/L/U/O - Move/Rotate Box or Sphere\n" +
-    "1/2/3/4/5/6 - Rotate (Box or Sphere)\n" +
+    "I/K/J/L/U/O - Move/Rotate (selected)\n" +
+    "1/2/3/4/5/6 - Rotate (selected)\n" +
     "Space - Switch Object\n" +
+    "0=Box,1=Sphere,2=Cylinder\n" +
     "Object: Box"
   );
   helpText._textCanvas.style.top = '80px';
 
   function updateHelpText() {
-    let objName = (currentObject === 0) ? "Box" : "Sphere";
+    let objName = "Box";
+    if (currentObject === 1) objName = "Sphere";
+    if (currentObject === 2) objName = "Cylinder";
     helpText.updateText(
       "Quest6 Raytracing:\n" +
       "T - Change camera mode\n" +
       "W/S/A/D/R/F - Move Camera\n" +
       "Arrows - Rotate Camera\n" +
       "+/- - Adjust Focal (Projective)\n" +
-      "I/K/J/L/U/O - Move/Rotate Box or Sphere\n" +
-      "1/2/3/4/5/6 - Rotate (Box or Sphere)\n" +
+      "I/K/J/L/U/O - Move/Rotate (selected)\n" +
+      "1/2/3/4/5/6 - Rotate (selected)\n" +
       "Space - Switch Object\n" +
+      "0=Box,1=Sphere,2=Cylinder\n" +
       "Object: " + objName
     );
   }
@@ -131,124 +135,55 @@ async function init() {
       tracerObj.updateCameraFocal();
     }
     if (e.key === ' ') {
-      currentObject = (currentObject === 0) ? 1 : 0;
+      currentObject = (currentObject + 1) % 3;
       updateHelpText();
     }
     let boxPose = tracerObj._box._pose;
     let spherePose = tracerObj._sphere._pose;
-    if (e.key === 'i' || e.key === 'I') {
+    let cylPose = tracerObj._cylinder._pose;
+
+    function moveSelected(dx, dy, dz) {
       if (currentObject === 0) {
-        boxPose[2] += 0.1;
+        boxPose[0] += dx; boxPose[1] += dy; boxPose[2] += dz;
         tracerObj.updateBoxPose();
-      } else {
-        spherePose[2] += 0.1;
+      } else if (currentObject === 1) {
+        spherePose[0] += dx; spherePose[1] += dy; spherePose[2] += dz;
         tracerObj.updateSpherePose();
+      } else {
+        cylPose[0] += dx; cylPose[1] += dy; cylPose[2] += dz;
+        tracerObj.updateCylinderPose();
       }
     }
-    if (e.key === 'k' || e.key === 'K') {
+    if (e.key === 'i' || e.key === 'I') moveSelected(0, 0, 0.1);
+    if (e.key === 'k' || e.key === 'K') moveSelected(0, 0, -0.1);
+    if (e.key === 'j' || e.key === 'J') moveSelected(-0.1, 0, 0);
+    if (e.key === 'l' || e.key === 'L') moveSelected(0.1, 0, 0);
+    if (e.key === 'u' || e.key === 'U') moveSelected(0, 0.1, 0);
+    if (e.key === 'o' || e.key === 'O') moveSelected(0, -0.1, 0);
+
+    function rotateSelected(rx, ry, rz) {
       if (currentObject === 0) {
-        boxPose[2] -= 0.1;
+        boxPose[4] += rx; boxPose[5] += ry; boxPose[6] += rz;
         tracerObj.updateBoxPose();
-      } else {
-        spherePose[2] -= 0.1;
+      } else if (currentObject === 1) {
+        spherePose[4] += rx; spherePose[5] += ry; spherePose[6] += rz;
         tracerObj.updateSpherePose();
+      } else {
+        cylPose[4] += rx; cylPose[5] += ry; cylPose[6] += rz;
+        tracerObj.updateCylinderPose();
       }
     }
-    if (e.key === 'j' || e.key === 'J') {
-      if (currentObject === 0) {
-        boxPose[0] -= 0.1;
-        tracerObj.updateBoxPose();
-      } else {
-        spherePose[0] -= 0.1;
-        tracerObj.updateSpherePose();
-      }
-    }
-    if (e.key === 'l' || e.key === 'L') {
-      if (currentObject === 0) {
-        boxPose[0] += 0.1;
-        tracerObj.updateBoxPose();
-      } else {
-        spherePose[0] += 0.1;
-        tracerObj.updateSpherePose();
-      }
-    }
-    if (e.key === 'u' || e.key === 'U') {
-      if (currentObject === 0) {
-        boxPose[1] += 0.1;
-        tracerObj.updateBoxPose();
-      } else {
-        spherePose[1] += 0.1;
-        tracerObj.updateSpherePose();
-      }
-    }
-    if (e.key === 'o' || e.key === 'O') {
-      if (currentObject === 0) {
-        boxPose[1] -= 0.1;
-        tracerObj.updateBoxPose();
-      } else {
-        spherePose[1] -= 0.1;
-        tracerObj.updateSpherePose();
-      }
-    }
-    if (e.key === '1') {
-      if (currentObject === 0) {
-        boxPose[4] += 0.1;
-        tracerObj.updateBoxPose();
-      } else {
-        spherePose[4] += 0.1;
-        tracerObj.updateSpherePose();
-      }
-    }
-    if (e.key === '2') {
-      if (currentObject === 0) {
-        boxPose[4] -= 0.1;
-        tracerObj.updateBoxPose();
-      } else {
-        spherePose[4] -= 0.1;
-        tracerObj.updateSpherePose();
-      }
-    }
-    if (e.key === '3') {
-      if (currentObject === 0) {
-        boxPose[5] += 0.1;
-        tracerObj.updateBoxPose();
-      } else {
-        spherePose[5] += 0.1;
-        tracerObj.updateSpherePose();
-      }
-    }
-    if (e.key === '4') {
-      if (currentObject === 0) {
-        boxPose[5] -= 0.1;
-        tracerObj.updateBoxPose();
-      } else {
-        spherePose[5] -= 0.1;
-        tracerObj.updateSpherePose();
-      }
-    }
-    if (e.key === '5') {
-      if (currentObject === 0) {
-        boxPose[6] += 0.1;
-        tracerObj.updateBoxPose();
-      } else {
-        spherePose[6] += 0.1;
-        tracerObj.updateSpherePose();
-      }
-    }
-    if (e.key === '6') {
-      if (currentObject === 0) {
-        boxPose[6] -= 0.1;
-        tracerObj.updateBoxPose();
-      } else {
-        spherePose[6] -= 0.1;
-        tracerObj.updateSpherePose();
-      }
-    }
+    if (e.key === '1') rotateSelected(0.1, 0, 0);
+    if (e.key === '2') rotateSelected(-0.1, 0, 0);
+    if (e.key === '3') rotateSelected(0, 0.1, 0);
+    if (e.key === '4') rotateSelected(0, -0.1, 0);
+    if (e.key === '5') rotateSelected(0, 0, 0.1);
+    if (e.key === '6') rotateSelected(0, 0, -0.1);
   });
 
   let frameCnt = 0;
   let tgtFPS = 60;
-  let secPerFrame = 1. / tgtFPS;
+  let secPerFrame = 1 / tgtFPS;
   let frameInterval = secPerFrame * 1000;
   let lastCalled;
 

@@ -24,6 +24,7 @@
 import RayTracingObject from "/quest6/lib/DSViz/RayTracingObject.js"
 import UnitCube from "/quest6/lib/DS/UnitCube2.js"
 import UnitSphere from "/quest6/lib/DS/UnitSphere.js"
+import UnitCylinder from "/quest6/lib/DS/UnitCylinder.js"
 
 export default class RayTracingBoxObject extends RayTracingObject {
   constructor(device, canvasFormat, camera, showTexture = true) {
@@ -32,6 +33,7 @@ export default class RayTracingBoxObject extends RayTracingObject {
     this._showTexture = showTexture;
     this._box = new UnitCube();
     this._sphere = new UnitSphere();
+    this._cylinder = new UnitCylinder();
   }
   
   async createGeometry() {
@@ -48,7 +50,8 @@ export default class RayTracingBoxObject extends RayTracingObject {
     );
     let boxBytes = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6;
     let sphereBytes = this._sphere._pose.byteLength + this._sphere._scales.byteLength;
-    let totalSize = boxBytes + sphereBytes;
+    let cylinderBytes = this._cylinder._pose.byteLength + this._cylinder._scales.byteLength;
+    let totalSize = boxBytes + sphereBytes + cylinderBytes;
     this._sceneBuffer = this._device.createBuffer({
       size: totalSize,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -73,6 +76,10 @@ export default class RayTracingBoxObject extends RayTracingObject {
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._sphere._pose);
     offset += this._sphere._pose.byteLength;
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._sphere._scales);
+    offset += this._sphere._scales.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cylinder._pose);
+    offset += this._cylinder._pose.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cylinder._scales);
   }
   
   updateGeometry() {
@@ -85,8 +92,7 @@ export default class RayTracingBoxObject extends RayTracingObject {
   }
   
   updateBoxPose() {
-    let offset = 0;
-    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._box._pose);
+    this._device.queue.writeBuffer(this._sceneBuffer, 0, this._box._pose);
   }
   
   updateBoxScales() {
@@ -95,14 +101,26 @@ export default class RayTracingBoxObject extends RayTracingObject {
   }
   
   updateSpherePose() {
-    let boxBytes = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6;
-    this._device.queue.writeBuffer(this._sceneBuffer, boxBytes, this._sphere._pose);
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._sphere._pose);
   }
   
   updateSphereScales() {
-    let boxBytes = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6;
-    let offset = boxBytes + this._sphere._pose.byteLength;
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6 + this._sphere._pose.byteLength;
     this._device.queue.writeBuffer(this._sceneBuffer, offset, this._sphere._scales);
+  }
+  
+  updateCylinderPose() {
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6
+                 + this._sphere._pose.byteLength + this._sphere._scales.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cylinder._pose);
+  }
+  
+  updateCylinderScales() {
+    let offset = this._box._pose.byteLength + this._box._scales.byteLength + this._box._front.byteLength*6
+                 + this._sphere._pose.byteLength + this._sphere._scales.byteLength
+                 + this._cylinder._pose.byteLength;
+    this._device.queue.writeBuffer(this._sceneBuffer, offset, this._cylinder._scales);
   }
   
   updateCameraPose() {
