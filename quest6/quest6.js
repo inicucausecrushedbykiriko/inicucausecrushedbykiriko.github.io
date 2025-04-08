@@ -56,7 +56,7 @@ async function init() {
     "I/K/J/L/U/O - Move/Rotate (selected)\n" +
     "1/2/3/4/5/6 - Rotate (selected)\n" +
     "Space - Switch Object\n" +
-    "0=Box,1=Sphere,2=Cylinder\n" +
+    "0=Box,1=Sphere,2=Cylinder,3=Cone\n" +
     "Object: Box"
   );
   helpText._textCanvas.style.top = '80px';
@@ -64,7 +64,8 @@ async function init() {
   function updateHelpText() {
     let objName = "Box";
     if (currentObject === 1) objName = "Sphere";
-    if (currentObject === 2) objName = "Cylinder";
+    else if (currentObject === 2) objName = "Cylinder";
+    else if (currentObject === 3) objName = "Cone";
     helpText.updateText(
       "Quest6 Raytracing:\n" +
       "T - Change camera mode\n" +
@@ -74,7 +75,7 @@ async function init() {
       "I/K/J/L/U/O - Move/Rotate (selected)\n" +
       "1/2/3/4/5/6 - Rotate (selected)\n" +
       "Space - Switch Object\n" +
-      "0=Box,1=Sphere,2=Cylinder\n" +
+      "0=Box,1=Sphere,2=Cylinder,3=Cone\n" +
       "Object: " + objName
     );
   }
@@ -135,12 +136,13 @@ async function init() {
       tracerObj.updateCameraFocal();
     }
     if (e.key === ' ') {
-      currentObject = (currentObject + 1) % 3;
+      currentObject = (currentObject + 1) % 4;
       updateHelpText();
     }
     let boxPose = tracerObj._box._pose;
     let spherePose = tracerObj._sphere._pose;
     let cylPose = tracerObj._cylinder._pose;
+    let conePose = tracerObj._cone._pose;
 
     function moveSelected(dx, dy, dz) {
       if (currentObject === 0) {
@@ -149,9 +151,12 @@ async function init() {
       } else if (currentObject === 1) {
         spherePose[0] += dx; spherePose[1] += dy; spherePose[2] += dz;
         tracerObj.updateSpherePose();
-      } else {
+      } else if (currentObject === 2) {
         cylPose[0] += dx; cylPose[1] += dy; cylPose[2] += dz;
         tracerObj.updateCylinderPose();
+      } else {
+        conePose[0] += dx; conePose[1] += dy; conePose[2] += dz;
+        tracerObj.updateConePose();
       }
     }
     if (e.key === 'i' || e.key === 'I') moveSelected(0, 0, 0.1);
@@ -168,9 +173,12 @@ async function init() {
       } else if (currentObject === 1) {
         spherePose[4] += rx; spherePose[5] += ry; spherePose[6] += rz;
         tracerObj.updateSpherePose();
-      } else {
+      } else if (currentObject === 2) {
         cylPose[4] += rx; cylPose[5] += ry; cylPose[6] += rz;
         tracerObj.updateCylinderPose();
+      } else {
+        conePose[4] += rx; conePose[5] += ry; conePose[6] += rz;
+        tracerObj.updateConePose();
       }
     }
     if (e.key === '1') rotateSelected(0.1, 0, 0);

@@ -1,12 +1,13 @@
 export default class UnitCone {
-    constructor() {
-      // Right circular cone aligned to local z-axis
-      this._pose = new Float32Array(8).fill(0);
-      // scale.x => radius at base, scale.y => radius at base, scale.z => height
-      this._scales = new Float32Array([0.25, 0.25, 0.5, 1]);
-    }
-    updatePose(newPose) {
-      for (let i = 0; i < 8; ++i) this._pose[i] = newPose[i];
-    }
+  constructor() {
+    // Pose: [pos.x, pos.y, pos.z, dummy, rot.x, rot.y, rot.z, dummy]
+    this._pose = new Float32Array(8).fill(0);
+    // Scale: [radius, halfHeight, unused, 1]
+    // Use default radius = 0.3 and halfHeight = 0.5
+    this._scales = new Float32Array([0.3, 0.5, 1.0, 1.0]);
   }
   
+  updatePose(newPose) {
+    for (let i = 0; i < 8; ++i) this._pose[i] = newPose[i];
+  }
+}
