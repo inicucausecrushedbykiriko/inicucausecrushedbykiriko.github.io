@@ -22,8 +22,8 @@
  */
 
 struct Pose {
-  pos: vec4f,    // [x, y, z, 1 padding]
-  angles: vec4f, // [rx, ry, rz, 1 padding]
+  pos: vec4f,
+  angles: vec4f,
 }
 
 fn translate(pt: vec3f, dx: f32, dy: f32, dz: f32) -> vec3f {
@@ -34,13 +34,13 @@ fn rotate(pt: vec3f, axis: i32, angle: f32) -> vec3f {
   let c = cos(angle);
   let s = sin(angle);
   switch (axis) {
-    case 0: {  // x-axis
+    case 0: {
       return vec3f(pt.x, pt.y * c - pt.z * s, pt.y * s + pt.z * c);
     }
-    case 1: {  // y-axis
+    case 1: {
       return vec3f(pt.x * c + pt.z * s, pt.y, -pt.x * s + pt.z * c);
     }
-    case 2: {  // z-axis
+    case 2: {
       return vec3f(pt.x * c - pt.y * s, pt.x * s + pt.y * c, pt.z);
     }
     default: {
@@ -49,7 +49,6 @@ fn rotate(pt: vec3f, axis: i32, angle: f32) -> vec3f {
   }
 }
 
-// Applies pose forward to point
 fn applyPoseToPoint(pt: vec3f, pose: Pose) -> vec3f {
   var out = rotate(pt, 0, pose.angles.x);
   out = rotate(out, 1, pose.angles.y);
@@ -58,7 +57,6 @@ fn applyPoseToPoint(pt: vec3f, pose: Pose) -> vec3f {
   return out;
 }
 
-// Applies pose forward to direction
 fn applyPoseToDir(dir: vec3f, pose: Pose) -> vec3f {
   var out = rotate(dir, 0, pose.angles.x);
   out = rotate(out, 1, pose.angles.y);
@@ -66,9 +64,7 @@ fn applyPoseToDir(dir: vec3f, pose: Pose) -> vec3f {
   return out;
 }
 
-// Applies pose **reverse** to point
 fn applyReversePoseToPoint(pt: vec3f, pose: Pose) -> vec3f {
-  // Opposite order: translate by -pos, rotate in reverse order/angle
   var out = translate(pt, -pose.pos.x, -pose.pos.y, -pose.pos.z);
   out = rotate(out, 2, -pose.angles.z);
   out = rotate(out, 1, -pose.angles.y);
@@ -76,7 +72,6 @@ fn applyReversePoseToPoint(pt: vec3f, pose: Pose) -> vec3f {
   return out;
 }
 
-// Applies pose **reverse** to direction
 fn applyReversePoseToDir(dir: vec3f, pose: Pose) -> vec3f {
   var out = rotate(dir, 2, -pose.angles.z);
   out = rotate(out, 1, -pose.angles.y);
@@ -93,15 +88,15 @@ struct Camera {
 }
 
 struct Quad {
-  ll: vec4f, // lower-left corner
-  lr: vec4f, // lower-right
-  ur: vec4f, // upper-right
-  ul: vec4f, // upper-left
+  ll: vec4f,
+  lr: vec4f,
+  ur: vec4f,
+  ul: vec4f,
 }
 
 struct Box {
-  pose: Pose,        // box's model pose
-  scale: vec4f,      // scale factor
+  pose: Pose,
+  scale: vec4f,
   faces: array<Quad, 6>,
 }
 
@@ -109,7 +104,6 @@ struct Box {
 @group(0) @binding(1) var<uniform> box: Box;
 @group(0) @binding(2) var outTexture: texture_storage_2d<rgba8unorm, write>;
 
-// Axis-aligned quad intersection
 fn quadRayHitCheck(s: vec3f, d: vec3f, q: Quad, currentT: f32) -> vec2f {
   var nt = -1.0;
   if (abs(q.ll.z - q.ur.z) <= EPSILON) {
@@ -137,7 +131,6 @@ fn quadRayHitCheck(s: vec3f, d: vec3f, q: Quad, currentT: f32) -> vec2f {
       }
     }
   }
-
   if (nt < 0.0) {
     return vec2f(currentT, -1.0);
   } else if (currentT < 0.0) {
@@ -151,20 +144,14 @@ fn quadRayHitCheck(s: vec3f, d: vec3f, q: Quad, currentT: f32) -> vec2f {
   }
 }
 
-// We transform from world coordinates => camera => object local
 fn transformRayToLocalSpace(startPt: vec3f, dir: vec3f) -> array<vec3f, 2> {
-  // 1) Apply the camera’s forward transform to s/d
   let sCam = applyPoseToPoint(startPt, cameraPose.pose);
   let dCam = applyPoseToDir(dir, cameraPose.pose);
-
-  // 2) Then apply the box’s reverse transform to s/d
   let sLocal = applyReversePoseToPoint(sCam, box.pose);
   let dLocal = applyReversePoseToDir(dCam, box.pose);
-
   return array<vec3f, 2>(sLocal, dLocal);
 }
 
-// Ray-box intersection in local space
 fn rayBoxIntersection(startPt: vec3f, dir: vec3f) -> vec2f {
   var t = -1.0;
   var idx = -1.0;
@@ -181,17 +168,22 @@ fn rayBoxIntersection(startPt: vec3f, dir: vec3f) -> vec2f {
 fn assignColor(uv: vec2i, t: f32, faceIndex: i32) {
   var c: vec4f;
   if (t > 0.0) {
+    var baseC: vec4f;
     switch(faceIndex) {
-      case 0: { c = vec4f(232./255., 119./255., 34./255., 1.); break; }
-      case 1: { c = vec4f(255./255., 163./255., 0./255., 1.); break; }
-      case 2: { c = vec4f(0./255., 130./255., 186./255., 1.); break; }
-      case 3: { c = vec4f(89./255., 203./255., 232./255., 1.); break; }
-      case 4: { c = vec4f(217./255., 217./255., 214./255., 1.); break; }
-      case 5: { c = vec4f(167./255., 168./255., 170./255., 1.); break; }
-      default: { c = vec4f(0., 0., 0., 1.); break; }
+      case 0: { baseC = vec4f(232./255., 119./255., 34./255., 1.); break; }
+      case 1: { baseC = vec4f(255./255., 163./255., 0./255., 1.); break; }
+      case 2: { baseC = vec4f(0./255., 130./255., 186./255., 1.); break; }
+      case 3: { baseC = vec4f(89./255., 203./255., 232./255., 1.); break; }
+      case 4: { baseC = vec4f(217./255., 217./255., 214./255., 1.); break; }
+      case 5: { baseC = vec4f(167./255., 168./255., 170./255., 1.); break; }
+      default: { baseC = vec4f(0., 0., 0., 1.); }
     }
+    let factor = clamp(t / 3.0, 0.0, 1.0);
+    let depthColor = mix(vec3f(1.0, 0.0, 0.0), vec3f(0.0, 0.0, 1.0), factor);
+    let finalRGB = mix(baseC.xyz, depthColor, 0.6);
+    c = vec4f(finalRGB, 1.0);
   } else {
-    c = vec4f(0./255., 56./255., 101./255., 1.);
+    c = vec4f(0.0, 0.0, 0.0, 1.0);
   }
   textureStore(outTexture, uv, c);
 }
@@ -201,9 +193,7 @@ fn assignColor(uv: vec2i, t: f32, faceIndex: i32) {
 fn computeOrthogonalMain(@builtin(global_invocation_id) global_id: vec3u) {
   let uv = vec2i(global_id.xy);
   let texDim = vec2i(textureDimensions(outTexture));
-
   if (uv.x < texDim.x && uv.y < texDim.y) {
-    // Pixel size in [-1,1]
     let psize = vec2f(2., 2.) / cameraPose.res;
     var startPt = vec3f(
       (f32(uv.x) + 0.5) * psize.x - 1.,
@@ -211,7 +201,6 @@ fn computeOrthogonalMain(@builtin(global_invocation_id) global_id: vec3u) {
       0.
     );
     var dir = vec3f(0., 0., 1.);
-
     let localRay = transformRayToLocalSpace(startPt, dir);
     let hitInfo = rayBoxIntersection(localRay[0], localRay[1]);
     assignColor(uv, hitInfo.x, i32(hitInfo.y));
@@ -223,18 +212,13 @@ fn computeOrthogonalMain(@builtin(global_invocation_id) global_id: vec3u) {
 fn computeProjectiveMain(@builtin(global_invocation_id) global_id: vec3u) {
   let uv = vec2i(global_id.xy);
   let texDim = vec2i(textureDimensions(outTexture));
-
   if (uv.x < texDim.x && uv.y < texDim.y) {
-    // Transform pixel coords into [-1,1]
     let xNdc = (f32(uv.x) + 0.5) / cameraPose.res.x * 2. - 1.;
     let yNdc = (f32(uv.y) + 0.5) / cameraPose.res.y * 2. - 1.;
-    // Adjust by camera focal
     let px = xNdc / cameraPose.focal.x;
     let py = yNdc / cameraPose.focal.y;
-
     var startPt = vec3f(0., 0., 0.);
     var dir = normalize(vec3f(px, py, 1.));
-
     let localRay = transformRayToLocalSpace(startPt, dir);
     let hitInfo = rayBoxIntersection(localRay[0], localRay[1]);
     assignColor(uv, hitInfo.x, i32(hitInfo.y));
