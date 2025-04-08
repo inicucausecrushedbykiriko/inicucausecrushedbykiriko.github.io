@@ -46,28 +46,32 @@ async function init() {
 
   let fps = '??';
   let fpsText = new StandardTextObject('fps: ' + fps);
+  let currentObject = 0; 
   let helpText = new StandardTextObject(
     "Quest6 Raytracing:\n" +
     "T - Change camera mode\n" +
     "W/S/A/D/R/F - Move Camera\n" +
     "Arrows - Rotate Camera\n" +
     "+/- - Adjust Focal (Projective)\n" +
-    "I/K/J/L/U/O - Move Cube\n" +
-    "1/2/3/4/5/6 - Rotate Cube\n" +
-    "Camera: Orthographic"
+    "I/K/J/L/U/O - Move/Rotate Box or Sphere\n" +
+    "1/2/3/4/5/6 - Rotate (Box or Sphere)\n" +
+    "Space - Switch Object\n" +
+    "Object: Box"
   );
   helpText._textCanvas.style.top = '80px';
 
   function updateHelpText() {
+    let objName = (currentObject === 0) ? "Box" : "Sphere";
     helpText.updateText(
       "Quest6 Raytracing:\n" +
       "T - Change camera mode\n" +
       "W/S/A/D/R/F - Move Camera\n" +
       "Arrows - Rotate Camera\n" +
       "+/- - Adjust Focal (Projective)\n" +
-      "I/K/J/L/U/O - Move Cube\n" +
-      "1/2/3/4/5/6 - Rotate Cube\n" +
-      "Camera: " + (camera._isProjective ? "Projective" : "Orthographic")
+      "I/K/J/L/U/O - Move/Rotate Box or Sphere\n" +
+      "1/2/3/4/5/6 - Rotate (Box or Sphere)\n" +
+      "Space - Switch Object\n" +
+      "Object: " + objName
     );
   }
 
@@ -126,54 +130,119 @@ async function init() {
       camera._focal[1] /= 1.1;
       tracerObj.updateCameraFocal();
     }
+    if (e.key === ' ') {
+      currentObject = (currentObject === 0) ? 1 : 0;
+      updateHelpText();
+    }
     let boxPose = tracerObj._box._pose;
+    let spherePose = tracerObj._sphere._pose;
     if (e.key === 'i' || e.key === 'I') {
-      boxPose[2] += 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[2] += 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[2] += 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === 'k' || e.key === 'K') {
-      boxPose[2] -= 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[2] -= 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[2] -= 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === 'j' || e.key === 'J') {
-      boxPose[0] -= 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[0] -= 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[0] -= 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === 'l' || e.key === 'L') {
-      boxPose[0] += 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[0] += 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[0] += 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === 'u' || e.key === 'U') {
-      boxPose[1] += 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[1] += 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[1] += 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === 'o' || e.key === 'O') {
-      boxPose[1] -= 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[1] -= 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[1] -= 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === '1') {
-      boxPose[4] += 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[4] += 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[4] += 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === '2') {
-      boxPose[4] -= 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[4] -= 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[4] -= 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === '3') {
-      boxPose[5] += 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[5] += 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[5] += 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === '4') {
-      boxPose[5] -= 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[5] -= 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[5] -= 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === '5') {
-      boxPose[6] += 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[6] += 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[6] += 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
     if (e.key === '6') {
-      boxPose[6] -= 0.1;
-      tracerObj.updateBoxPose();
+      if (currentObject === 0) {
+        boxPose[6] -= 0.1;
+        tracerObj.updateBoxPose();
+      } else {
+        spherePose[6] -= 0.1;
+        tracerObj.updateSpherePose();
+      }
     }
   });
 
