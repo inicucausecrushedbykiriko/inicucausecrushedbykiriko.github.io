@@ -22,16 +22,13 @@
  */
  
 import Math3D from '/quest7/lib/Math/Math3D.js'
- 
+
 export default class Camera {
   constructor(width, height) {
-    // pose has eight values
-    // First three store the current camera location [pos x, pos y, pos z] + 1 padding
-    // Second three store the current camera orientations [angle x, angle y, angle z] + 1 padding
-    // the orientation is described by the rotation along the x-, y-, and z-axis.
-    this._pose = new Float32Array(Array(8).fill(0));
-    this._focal = new Float32Array(Array(2).fill(1));
+    this._pose = new Float32Array(8).fill(0);
+    this._focal = new Float32Array(2).fill(1);
     this._resolutions = new Float32Array([width, height]);
+    this._mode = "pinhole"; 
   }
   
   resetPose() {
@@ -49,35 +46,10 @@ export default class Camera {
     this._resolutions[1] = height;
   }
 
-  moveX(d) {
-    // TODO: write code to move the camera in the x-direction
-    
-  }
-  
-  moveY(d) {
-    // TODO: write code to move the camera in the y-direction
-    
-  }
-  
-  moveZ(d) {
-    // TODO: write code to move the camera in the z-direction
-    
-  }
-  
-  rotateX(d) {
-    // TODO: write code to rotate the camera along its x-axis
-    
-    
-  }
-  
-  rotateY(d) {
-    // TODO: write code to rotate the camera along its y-axis
-    
-  }
-  
-  rotateZ(d) {
-    // TODO: write code to rotate the camera along its z-axis
-    
-    
-  }
+  moveX(d) { this._pose[0] += d; }
+  moveY(d) { this._pose[1] += d; }
+  moveZ(d) { this._pose[2] += d; }
+  rotateX(d) { this._pose[4] += d; }
+  rotateY(d) { this._pose[5] += d; }
+  rotateZ(d) { this._pose[6] += d; }
 }

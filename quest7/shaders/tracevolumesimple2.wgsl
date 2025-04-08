@@ -249,7 +249,5 @@ fn computeOrthogonalMain(@builtin(global_invocation_id) global_id: vec3u) {
 @compute
 @workgroup_size(16, 16)
 fn computeProjectiveMain(@builtin(global_invocation_id) global_id: vec3u) {
-  // TODO: copy your code of quest 6 here
-  // This should be very similar to the orthogonal one above
-  
+  // This should be very similar to the orthogonal one above, but a projection pinhole camera.
 }
