@@ -95,7 +95,7 @@ async function init() {
     }
 
     if (e.key === 's') {
-      shadingMode = (shadingMode + 1) % 3; // Cycle through shading modes
+      shadingMode = (shadingMode + 1) % 5; // Cycle through shading modes
       switch (shadingMode) {
         case 0:
           shadingText.updateText('Shading Mode: Lambertian');
@@ -105,6 +105,12 @@ async function init() {
           break;
         case 2:
           shadingText.updateText('Shading Mode: Tone');
+          break;
+        case 3:
+          shadingText.updateText('Shading Mode: Blinn-Phong');
+          break;
+        case 4:
+          shadingText.updateText('Shading Mode: Cook-Torrance');
           break;
       }
       tracerObj.updateShadingMode(shadingMode);

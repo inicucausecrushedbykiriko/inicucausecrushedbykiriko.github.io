@@ -346,6 +346,41 @@ fn toneShading(lightInfo: LightInfo, objectNormal: vec3f, viewDir: vec3f, steps:
   return lightInfo.intensity * quantizedDiffuse;
 }
 
+fn blinnPhongShading(lightInfo: LightInfo, objectNormal: vec3f, viewDir: vec3f, shininess: f32) -> vec4f {
+    let lightDir = lightInfo.lightdir;
+    let halfDir = normalize(lightDir + viewDir);  // Halfway vector
+    let diffuse = max(dot(lightDir, -objectNormal), 0.0);
+    let specular = pow(max(dot(halfDir, objectNormal), 0.0), shininess);
+    return lightInfo.intensity * (diffuse + specular);
+}
+
+fn cookTorranceShading(lightInfo: LightInfo, objectNormal: vec3f, viewDir: vec3f, roughness: f32) -> vec4f {
+    let lightDir = lightInfo.lightdir;
+    let F0 = 0.04; // Fresnel term for dielectric (assumed here for simplicity)
+    
+    // Fresnel-Schlick approximation
+    let F = F0 + (1.0 - F0) * pow(1.0 - max(dot(viewDir, objectNormal), 0.0), 5.0);
+    
+    // Geometric attenuation (GGX)
+    let H = normalize(lightDir + viewDir); // Halfway vector
+    let NdotH = max(dot(objectNormal, H), 0.0);
+    let NdotL = max(dot(objectNormal, lightDir), 0.0);
+    let VdotH = max(dot(viewDir, H), 0.0);
+    let NdotV = max(dot(objectNormal, viewDir), 0.0);  // Calculate NdotV here
+    
+    let a = roughness * roughness;
+    let G = NdotL * NdotV / (NdotL * (1.0 - a) + a); // Corrected this line
+    
+    // Microfacet Distribution Function (GGX)
+    let D = (a * a) / (3.14159 * pow(NdotH * NdotH * (a * a - 1.0) + 1.0, 2.0));
+    
+    // Cook-Torrance specular
+    let specular = (F * G * D) / (4.0 * NdotL * VdotH);
+    
+    return lightInfo.intensity * specular;
+}
+
+
 // Modify the main loop to use shadingMode
 @compute
 @workgroup_size(16, 16)
@@ -372,13 +407,19 @@ fn computeOrthogonalMain(@builtin(global_invocation_id) global_id: vec3u) {
       let lightInfo = getLightInfo(lightPos, lightDir, hitPt, normal);
       
       if (shadingMode == 0.0) {
-        color = emit + lambertianShading(lightInfo, normal);
+          color = emit + lambertianShading(lightInfo, normal);
       } else if (shadingMode == 1.0) {
-        let viewDir = normalize(cameraPose.pose.pos.xyz - hitPt);
-        color = emit + phongShading(lightInfo, normal, viewDir, 50.0);
+          let viewDir = normalize(cameraPose.pose.pos.xyz - hitPt);
+          color = emit + phongShading(lightInfo, normal, viewDir, 50.0);
       } else if (shadingMode == 2.0) {
-        let viewDir = normalize(cameraPose.pose.pos.xyz - hitPt);
-        color = emit + toneShading(lightInfo, normal, viewDir, 4);
+          let viewDir = normalize(cameraPose.pose.pos.xyz - hitPt);
+          color = emit + toneShading(lightInfo, normal, viewDir, 4);
+      } else if (shadingMode == 3.0) { // Blinn-Phong Shading
+          let viewDir = normalize(cameraPose.pose.pos.xyz - hitPt);
+          color = emit + blinnPhongShading(lightInfo, normal, viewDir, 50.0);
+      } else if (shadingMode == 4.0) { // Cook-Torrance Shading
+          let viewDir = normalize(cameraPose.pose.pos.xyz - hitPt);
+          color = emit + cookTorranceShading(lightInfo, normal, viewDir, 0.5); // Roughness value can be modified
       }
     }
     textureStore(outTexture, uv, color); 
