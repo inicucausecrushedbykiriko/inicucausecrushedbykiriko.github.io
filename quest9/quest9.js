@@ -62,13 +62,13 @@ async function init() {
   );
   helpText._textCanvas.style.top = '40px';
 
-  let shadowMode = 0; // 0 - Hard Shadows, 1 - Soft Shadows
+  let shadowMode = 0;
   var shadowText = new StandardTextObject('Shadow Mode: Hard Shadows  ');
   shadowText._textCanvas.style.top = '160px';
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 't') {
-      shadowMode = (shadowMode + 1) % 3; // Toggle between Hard, Soft, and SDF Shadows
+      shadowMode = (shadowMode + 1) % 3;
       switch (shadowMode) {
         case 0:
           shadowText.updateText('Shadow Mode: Hard Shadows');
@@ -102,7 +102,7 @@ async function init() {
 
   let frameCnt = 0;
   let tgtFPS = 60;
-  let secPerFrame = 1. / tgtFPS;
+  let secPerFrame = 1.0 / tgtFPS;
   let frameInterval = secPerFrame * 1000;
   let lastCalled;
 
