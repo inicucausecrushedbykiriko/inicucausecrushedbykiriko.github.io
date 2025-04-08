@@ -21,13 +21,13 @@
  *                                anything the license permits.
  */
 
-import RayTracingObject from "/lib/DSViz/RayTracingObject.js"
-import VolumeData from "/lib/DS/VolumeData.js"
+import RayTracingObject from "/quest10/lib/DSViz/RayTracingObject.js"
+import VolumeData from "/quest10/lib/DS/VolumeData.js"
 
 export default class VolumeRenderingSimpleObject extends RayTracingObject {
   constructor(device, canvasFormat, camera) {
     super(device, canvasFormat);
-    this._volume = new VolumeData('/assets/brainweb-t1-1mm-pn0-rf0.raws');
+    this._volume = new VolumeData('/quest10/assets/brainweb-t1-1mm-pn0-rf0.raws');
     this._camera = camera;
   }
   
@@ -77,7 +77,7 @@ export default class VolumeRenderingSimpleObject extends RayTracingObject {
   }
 
   async createShaders() {
-    let shaderCode = await this.loadShader("/shaders/tracevolumesimple2.wgsl");
+    let shaderCode = await this.loadShader("/quest10/shaders/tracevolumesimple2.wgsl");
     this._shaderModule = this._device.createShaderModule({
       label: " Shader " + this.getName(),
       code: shaderCode,

@@ -21,8 +21,8 @@
  *                                anything the license permits.
  */
  
-import PolygonIO from "/lib/IO/PolygonIO.js"
-import PGA2D from "/lib/Math/PGA2D.js"
+import PolygonIO from "/quest10/lib/IO/PolygonIO.js"
+import PGA2D from "/quest10/lib/Math/PGA2D.js"
 
 export default class Polygon {
   // Note: Polygon consists only vertices where the first and the last are the same

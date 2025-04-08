@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
 
-import MeshIO from "/lib/IO/MeshIO.js"
+import MeshIO from "/quest10/lib/IO/MeshIO.js"
 
 export default class PlyIO extends MeshIO {
   constructor() { }

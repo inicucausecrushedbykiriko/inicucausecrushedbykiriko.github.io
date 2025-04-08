@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
 
-import SceneObject from '/lib/DSViz/SceneObject.js'
+import SceneObject from '/quest10/lib/DSViz/SceneObject.js'
 
 export default class MassSpringSystemObject extends SceneObject {
   constructor(device, canvasFormat, numParticles = 16) {
@@ -111,7 +111,7 @@ export default class MassSpringSystemObject extends SceneObject {
   updateGeometry() { }
   
   async createShaders() {
-    let shaderCode = await this.loadShader("/shaders/massspring.wgsl");
+    let shaderCode = await this.loadShader("/quest10/shaders/massspring.wgsl");
     this._shaderModule = this._device.createShaderModule({
       label: "Particles Shader " + this.getName(),
       code: shaderCode,

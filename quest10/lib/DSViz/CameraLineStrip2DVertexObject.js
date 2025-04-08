@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
 
-import SceneObject from "/lib/DSViz/SceneObject.js"
+import SceneObject from "/quest10/lib/DSViz/SceneObject.js"
 
 export default class CameraLineStrip2DVertexObject extends SceneObject {
   constructor(device, canvasFormat, cameraPose, vertices) {
@@ -66,7 +66,7 @@ export default class CameraLineStrip2DVertexObject extends SceneObject {
   }
   
   async createShaders() {
-    let shaderCode = await this.loadShader("/shaders/camera2d.wgsl");
+    let shaderCode = await this.loadShader("/quest10/shaders/camera2d.wgsl");
     this._shaderModule = this._device.createShaderModule({
       label: " Shader " + this.getName(),
       code: shaderCode,

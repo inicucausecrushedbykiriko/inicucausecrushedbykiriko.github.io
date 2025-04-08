@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
 
-import Renderer from "/lib/Viz/2DRenderer.js"
+import Renderer from "/quest10/lib/Viz/2DRenderer.js"
 
 export default class RayTracer extends Renderer {
   constructor(canvas) {

@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
  
-import VolumeByteIO from "/lib/IO/VolumeByteIO.js"
+import VolumeByteIO from "/quest10/lib/IO/VolumeByteIO.js"
 
 export default class VolumeData {
   // Note: Volume Data comes from Brainweb: https://brainweb.bic.mni.mcgill.ca

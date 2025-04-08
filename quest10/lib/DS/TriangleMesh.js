@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
  
-import PlyIO from "/lib/IO/PlyIO.js"
+import PlyIO from "/quest10/lib/IO/PlyIO.js"
 
 export default class TriangleMesh {
   constructor(filename) {

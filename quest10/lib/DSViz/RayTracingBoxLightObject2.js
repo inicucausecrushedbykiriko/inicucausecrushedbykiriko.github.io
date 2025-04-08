@@ -21,8 +21,8 @@
  *                                anything the license permits.
  */
 
-import RayTracingObject from "/lib/DSViz/RayTracingObject.js"
-import UnitCube from "/lib/DS/UnitCube2.js"
+import RayTracingObject from "/quest10/lib/DSViz/RayTracingObject.js"
+import UnitCube from "/quest10/lib/DS/UnitCube2.js"
 
 export default class RayTracingBoxLightObject extends RayTracingObject {
   constructor(device, canvasFormat, camera, showTexture = true) {
@@ -115,7 +115,7 @@ export default class RayTracingBoxLightObject extends RayTracingObject {
   }
 
   async createShaders() {
-    let shaderCode = await this.loadShader("/shaders/traceboxlight2.wgsl");
+    let shaderCode = await this.loadShader("/quest10/shaders/traceboxlight2.wgsl");
     this._shaderModule = this._device.createShaderModule({
       label: " Shader " + this.getName(),
       code: shaderCode,

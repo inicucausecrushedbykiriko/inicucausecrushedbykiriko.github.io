@@ -21,13 +21,13 @@
  *                                anything the license permits.
  */
 
-import SceneObject from "/lib/DSViz/SceneObject.js"
+import SceneObject from "/quest10/lib/DSViz/SceneObject.js"
 
 export default class ImageFilterObject extends SceneObject {
   async createGeometry() {}
   
   async createShaders() {
-    let shaderCode = await this.loadShader("/shaders/computenothing.wgsl");
+    let shaderCode = await this.loadShader("/quest10/shaders/computenothing.wgsl");
     this._shaderModule = this._device.createShaderModule({
       label: " Shader " + this.getName(),
       code: shaderCode,

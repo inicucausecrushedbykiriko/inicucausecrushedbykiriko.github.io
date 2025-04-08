@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
  
-import Math3D from '/lib/Math/Math3D.js'
+import Math3D from '/quest10/lib/Math/Math3D.js'
  
 export default class Camera {
   constructor(width, height) {

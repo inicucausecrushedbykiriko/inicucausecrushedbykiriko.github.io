@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
 
-import ImageFilterObject from "/lib/DSViz/ImageFilterObject.js"
+import ImageFilterObject from "/quest10/lib/DSViz/ImageFilterObject.js"
 
 export default class ImageNosifyFilterObject extends ImageFilterObject {
   async createGeometry() {
@@ -29,7 +29,7 @@ export default class ImageNosifyFilterObject extends ImageFilterObject {
   }
   
   async createShaders() {
-    let shaderCode = await this.loadShader("/shaders/computenosify.wgsl");
+    let shaderCode = await this.loadShader("/quest10/shaders/computenosify.wgsl");
     this._shaderModule = this._device.createShaderModule({
       label: " Shader " + this.getName(),
       code: shaderCode,

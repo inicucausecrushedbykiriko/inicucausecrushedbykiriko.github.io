@@ -26,10 +26,10 @@
 // Chrome & Edge 113+ : Enable Vulkan, Default ANGLE Vulkan, Vulkan from ANGLE, Unsafe WebGPU Support, and WebGPU Developer Features (if exsits)
 // Firefox Nightly: sudo snap install firefox --channel=latext/edge or download from https://www.mozilla.org/en-US/firefox/channel/desktop/
 
-import RayTracer from '/lib/Viz/RayTracer.js'
-import StandardTextObject from '/lib/DSViz/StandardTextObject.js'
-import Camera from '/lib/Viz/3DCamera.js'
-import RayTracingTriangleMeshObject from '/lib/DSViz/RayTracingTriangleMeshObject.js'
+import RayTracer from '/quest10/lib/Viz/RayTracer.js'
+import StandardTextObject from '/quest10/lib/DSViz/StandardTextObject.js'
+import Camera from '/quest10/lib/Viz/3DCamera.js'
+import RayTracingTriangleMeshObject from '/quest10/lib/DSViz/RayTracingTriangleMeshObject.js'
 
 async function init() {
   // Create a canvas tag
@@ -53,7 +53,7 @@ async function init() {
   camera._focal[0] = 1/4;
   camera._focal[1] = 1/4;
   // Create a triangle mesh object
-  var mesh = new RayTracingTriangleMeshObject(tracer._device, tracer._canvasFormat, '/assets/TOSCA/wolf0.ply', camera);
+  var mesh = new RayTracingTriangleMeshObject(tracer._device, tracer._canvasFormat, '/quest10/assets/TOSCA/wolf0.ply', camera);
   await tracer.setTracerObject(mesh);
   
   var instuctText = `z/Z: Change Trace Height (XXXXXX)

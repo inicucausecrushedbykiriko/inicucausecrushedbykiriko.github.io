@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
  
-import Light from "/lib/Viz/Light.js"
+import Light from "/quest10/lib/Viz/Light.js"
  
 export default class SpotLight extends Light {
   constructor(intensity = [1, 1, 1], position = [0, 0, 0], direction = [0, 1, 0], attenuation = [1, 0.1, 0.01], cutoff = 0.785, dropoff = 5) {

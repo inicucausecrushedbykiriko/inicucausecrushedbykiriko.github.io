@@ -26,10 +26,10 @@
 // Chrome & Edge 113+ : Enable Vulkan, Default ANGLE Vulkan, Vulkan from ANGLE, Unsafe WebGPU Support, and WebGPU Developer Features (if exsits)
 // Firefox Nightly: sudo snap install firefox --channel=latext/edge or download from https://www.mozilla.org/en-US/firefox/channel/desktop/
 
-import Renderer from '/lib/Viz/3DRenderer.js'
-import StandardTextObject from '/lib/DSViz/StandardTextObject.js'
-import Camera from '/lib/Viz/3DCamera.js'
-import CameraTriangleMeshLinearInterpolationObject from '/lib/DSViz/CameraTriangleMeshLinearInterpolationObject.js'
+import Renderer from '/quest10/lib/Viz/3DRenderer.js'
+import StandardTextObject from '/quest10/lib/DSViz/StandardTextObject.js'
+import Camera from '/quest10/lib/Viz/3DCamera.js'
+import CameraTriangleMeshLinearInterpolationObject from '/quest10/lib/DSViz/CameraTriangleMeshLinearInterpolationObject.js'
 
 async function init() {
   // Create a canvas tag
@@ -52,7 +52,7 @@ async function init() {
   camera._focal[0] = 4;
   camera._focal[1] = 4;
   // Create a triangle mesh object
-  var mesh = new CameraTriangleMeshLinearInterpolationObject(renderer._device, renderer._canvasFormat, '/assets/TOSCA/cat0.ply', '/assets/TOSCA/cat10.ply', camera);
+  var mesh = new CameraTriangleMeshLinearInterpolationObject(renderer._device, renderer._canvasFormat, '/quest10/assets/TOSCA/cat0.ply', '/quest10/assets/TOSCA/cat10.ply', camera);
   await renderer.appendSceneObject(mesh);
   
   let fps = '??';

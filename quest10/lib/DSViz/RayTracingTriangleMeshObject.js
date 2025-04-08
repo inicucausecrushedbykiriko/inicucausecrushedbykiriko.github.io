@@ -21,8 +21,8 @@
  *                                anything the license permits.
  */
 
-import RayTracingObject from "/lib/DSViz/RayTracingObject.js"
-import TriangleMesh from "/lib/DS/TriangleMesh.js"
+import RayTracingObject from "/quest10/lib/DSViz/RayTracingObject.js"
+import TriangleMesh from "/quest10/lib/DS/TriangleMesh.js"
 
 export default class RayTracingTriangleMeshObject extends RayTracingObject {
   constructor(device, canvasFormat, filename, camera) {
@@ -104,7 +104,7 @@ export default class RayTracingTriangleMeshObject extends RayTracingObject {
   }
   
   async createShaders() {
-    let shaderCode = await this.loadShader("/shaders/tracemesh.wgsl");
+    let shaderCode = await this.loadShader("/quest10/shaders/tracemesh.wgsl");
     this._meshShaderModule = this._device.createShaderModule({
       label: "Ray Trace Mesh Shader",
       code: shaderCode,

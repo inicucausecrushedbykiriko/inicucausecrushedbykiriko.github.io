@@ -21,8 +21,8 @@
  *                                anything the license permits.
  */
 
-import SceneObject from "/lib/DSViz/SceneObject.js"
-import Polygon from "/lib/DS/Polygon.js"
+import SceneObject from "/quest10/lib/DSViz/SceneObject.js"
+import Polygon from "/quest10/lib/DS/Polygon.js"
 
 export default class PolygonObject extends SceneObject {
   constructor(device, canvasFormat, filename) {
@@ -60,7 +60,7 @@ export default class PolygonObject extends SceneObject {
   }
   
   async createShaders() {
-    let shaderCode = await this.loadShader("/shaders/standard2d.wgsl");
+    let shaderCode = await this.loadShader("/quest10/shaders/standard2d.wgsl");
     this._shaderModule = this._device.createShaderModule({
       label: "Shader " + this.getName(),
       code: shaderCode,

@@ -21,7 +21,7 @@
  *                                anything the license permits.
  */
  
-import PGA3D from '/lib/Math/PGA3D.js'
+import PGA3D from '/quest10/lib/Math/PGA3D.js'
  
 export default class Camera {
   constructor(width, height) {
