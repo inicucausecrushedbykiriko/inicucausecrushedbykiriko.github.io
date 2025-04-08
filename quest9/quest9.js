@@ -63,7 +63,7 @@ async function init() {
   helpText._textCanvas.style.top = '40px';
 
   let shadowMode = 0; // 0 - Hard Shadows, 1 - Soft Shadows
-  var shadowText = new StandardTextObject('Shadow Mode: Hard Shadows');
+  var shadowText = new StandardTextObject('Shadow Mode: Hard Shadows  ');
   shadowText._textCanvas.style.top = '160px';
 
   document.addEventListener('keydown', (e) => {
