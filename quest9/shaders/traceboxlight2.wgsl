@@ -270,7 +270,7 @@ fn pcfShadow(hit: vec3f, ldir: vec3f) -> f32 {
   var sum: f32 = 0.0;
   let samples = 4;
   for (var i: i32 = 0; i < samples; i = i + 1) {
-    let offset = vec3f(f32(i) * 0.001, f32((i + 1) % 2) * 0.001, 0.0);
+    let offset = vec3f(f32(i) * 0.001, f32((i+1) % 2) * 0.001, 0.0);
     let ro = hit + ldir * eps + offset;
     let shadowHit = rayBoxIntersection(ro, ldir);
     if (shadowHit.x > 0.0) {
@@ -284,7 +284,7 @@ fn pcfShadow(hit: vec3f, ldir: vec3f) -> f32 {
 
 fn sdfShadow(hit: vec3f, ldir: vec3f, maxT: f32) -> f32 {
   var t: f32 = 0.0;
-  var shadowFactor: f32 = 1.0;
+  var shadowFactor = 1.0;
   let eps = 0.001;
   for (var i: i32 = 0; i < 50; i = i + 1) {
     let pos = hit + ldir * t;
@@ -296,6 +296,40 @@ fn sdfShadow(hit: vec3f, ldir: vec3f, maxT: f32) -> f32 {
     if (t >= maxT) { break; }
   }
   return max(shadowFactor, 0.1);
+}
+
+fn areaShadow(hit: vec3f, ldir: vec3f) -> f32 {
+  let samples: i32 = 4;
+  var total: f32 = 0.0;
+  let lightAreaSize: f32 = 0.1;
+  for (var i: i32 = 0; i < samples; i = i + 1) {
+    var offset: vec3f = vec3f(0.0, 0.0, 0.0);
+    if (i == 0) { offset = vec3f(-lightAreaSize, -lightAreaSize, 0.0); }
+    else if (i == 1) { offset = vec3f(lightAreaSize, -lightAreaSize, 0.0); }
+    else if (i == 2) { offset = vec3f(-lightAreaSize, lightAreaSize, 0.0); }
+    else if (i == 3) { offset = vec3f(lightAreaSize, lightAreaSize, 0.0); }
+    let lightPosSample = light.position.xyz + offset;
+    let newLdir = normalize(lightPosSample - hit);
+    let s = hit + newLdir * 0.001;
+    let shadowHit = rayBoxIntersection(s, newLdir);
+    if (shadowHit.x > 0.0) {
+      total = total + 0.1;
+    } else {
+      total = total + 1.0;
+    }
+  }
+  return total / f32(samples);
+}
+
+fn distanceShadow(hit: vec3f, ldir: vec3f) -> f32 {
+  let eps = 0.001;
+  let ro = hit + ldir * eps;
+  let shadowHit = rayBoxIntersection(ro, ldir);
+  if (shadowHit.x > 0.0) {
+    let shadowFactor = pow(min(shadowHit.x, 1.0), 0.85);
+    return max(shadowFactor, 0.1);
+  }
+  return 1.0;
 }
 
 fn commonCompute(global_id: vec3u) {
@@ -326,6 +360,10 @@ fn commonCompute(global_id: vec3u) {
         shadowAtten = pcfShadow(hitPt, -lightDir);
       } else if (shadowMode.mode == 2) {
         shadowAtten = sdfShadow(hitPt, -lightDir, 1.0);
+      } else if (shadowMode.mode == 3) {
+        shadowAtten = areaShadow(hitPt, -lightDir);
+      } else if (shadowMode.mode == 4) {
+        shadowAtten = distanceShadow(hitPt, -lightDir);
       }
       diffuse = diffuse * (lightInfo.intensity * shadowAtten);
       color = emit + diffuse;

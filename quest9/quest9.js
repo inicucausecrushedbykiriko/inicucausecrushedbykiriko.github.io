@@ -25,7 +25,6 @@
 // Need to enable experimental flags chrome://flags/
 // Chrome & Edge 113+ : Enable Vulkan, Default ANGLE Vulkan, Vulkan from ANGLE, Unsafe WebGPU Support, and WebGPU Developer Features (if exsits)
 // Firefox Nightly: sudo snap install firefox --channel=latext/edge or download from https://www.mozilla.org/en-US/firefox/channel/desktop/
-
 import RayTracer from '/quest9/lib/Viz/RayTracer.js'
 import StandardTextObject from '/quest9/lib/DSViz/StandardTextObject.js'
 import RayTracingBoxLightObject from '/quest9/lib/DSViz/RayTracingBoxLightObject2.js'
@@ -62,13 +61,13 @@ async function init() {
   );
   helpText._textCanvas.style.top = '40px';
 
-  let shadowMode = 0;
-  var shadowText = new StandardTextObject('Shadow Mode: Hard Shadows  ');
+  let shadowMode = 0; // 0: Hard, 1: PCF, 2: SDF, 3: Area, 4: Distance
+  var shadowText = new StandardTextObject('Shadow Mode: Hard Shadows');
   shadowText._textCanvas.style.top = '160px';
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 't') {
-      shadowMode = (shadowMode + 1) % 3;
+      shadowMode = (shadowMode + 1) % 5;
       switch (shadowMode) {
         case 0:
           shadowText.updateText('Shadow Mode: Hard Shadows');
@@ -80,6 +79,14 @@ async function init() {
           break;
         case 2:
           shadowText.updateText('Shadow Mode: SDF Shadows');
+          tracerObj.updateShadowMode(shadowMode);
+          break;
+        case 3:
+          shadowText.updateText('Shadow Mode: Area Light Sampling');
+          tracerObj.updateShadowMode(shadowMode);
+          break;
+        case 4:
+          shadowText.updateText('Shadow Mode: Distance-Based Shadows');
           tracerObj.updateShadowMode(shadowMode);
           break;
       }
