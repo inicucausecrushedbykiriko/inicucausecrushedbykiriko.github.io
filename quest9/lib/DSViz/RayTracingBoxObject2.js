@@ -21,8 +21,8 @@
  *                                anything the license permits.
  */
 
-import RayTracingObject from "/quest9/lib/DSViz/RayTracingObject.js"
-import UnitCube from "/quest9/lib/DS/UnitCube2.js"
+import RayTracingObject from "/quest9/lib/DSViz/RayTracingObject.js";
+import UnitCube from "/quest9/lib/DS/UnitCube2.js";
 
 export default class RayTracingBoxLightObject extends RayTracingObject {
   constructor(device, canvasFormat, camera, showTexture = true) {
@@ -30,11 +30,10 @@ export default class RayTracingBoxLightObject extends RayTracingObject {
     this._box = new UnitCube();
     this._camera = camera;
     this._showTexture = showTexture;
-    this._shadowMode = 0; // Default to Hard Shadows
   }
 
   updateShadowMode(mode) {
-    this._shadowMode = mode;
+    super.updateShadowMode(mode); // Calls the inherited updateShadowMode from RayTracingObject
   }
 
   async createGeometry() {
@@ -78,23 +77,81 @@ export default class RayTracingBoxLightObject extends RayTracingObject {
   updateLight(light) {
     let shadowFactor = 1;
     if (this._shadowMode === 1) {
-      shadowFactor = this.calculateSoftShadows(hitPoint, light);
+      shadowFactor = this.calculatePCFSoftShadows(hitPoint, light);
+    } else if (this._shadowMode === 2) {
+      shadowFactor = this.calculateDistanceBasedSoftShadows(hitPoint, light);
+    } else if (this._shadowMode === 3) {
+      shadowFactor = this.calculateSDFSoftShadows(hitPoint, light);
     }
     this._lightIntensity *= shadowFactor;
   }
 
-  calculateSoftShadows(hitPoint, lightSource) {
+  calculatePCFSoftShadows(hitPoint, lightSource) {
     let numSamples = 16;
-    let shadowIntensity = 0;
+    let totalIntensity = 0;
+
     for (let i = 0; i < numSamples; i++) {
-      let offset = this.getRandomOffsetForLight();
-      let lightPosition = lightSource.position.add(offset);
-      let shadowRay = this.calculateShadowRay(hitPoint, lightPosition);
+      let jitteredLightDir = this.jitterLightDirection(lightSource.direction);
+      let shadowRay = this.calculateShadowRay(hitPoint, jitteredLightDir);
       if (!this.isInShadow(shadowRay)) {
-        shadowIntensity += 1;
+        let lightInfo = this.getLightInfo(lightSource.position, jitteredLightDir, hitPoint, normal);
+        totalIntensity += lightInfo.intensity;
       }
     }
-    return shadowIntensity / numSamples;
+
+    return totalIntensity / numSamples;
+  }
+
+  jitterLightDirection(lightDir) {
+    let jitter = new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+    return lightDir.add(jitter).normalize();
+  }
+
+  calculateDistanceBasedSoftShadows(hitPoint, lightSource) {
+    let shadowRay = new Ray(hitPoint, lightSource.position.sub(hitPoint).normalize());
+    let shadowHit = this.traceScene(shadowRay);
+
+    if (shadowHit) {
+      let distance = hitPoint.distanceTo(shadowHit.position);
+      return Math.max(0.1, 1 - Math.pow(distance / 10, 2));
+    }
+
+    return 1.0;
+  }
+
+  calculateSDFSoftShadows(hitPoint, lightSource) {
+    let shadowRay = new Ray(hitPoint, lightSource.position.sub(hitPoint).normalize());
+    let marchStep = 0.01;
+    let maxDistance = 10;
+    let closestDist = maxDistance;
+
+    for (let t = 0; t < maxDistance; t += marchStep) {
+      let marchPoint = hitPoint.add(shadowRay.direction.mul(t));
+      let dist = this.getSDF(marchPoint);  
+
+      if (dist < closestDist) {
+        closestDist = dist;
+      }
+    }
+
+    return Math.max(0.1, 1 - closestDist / maxDistance);
+  }
+
+  getSDF(point) {
+    return Math.abs(point.distanceTo(sphere.center) - sphere.radius);
+  }
+
+  isInShadow(shadowRay) {
+    let shadowHit = this.traceScene(shadowRay);
+    return shadowHit != null;
+  }
+
+  calculateShadowRay(hitPoint, lightPosition) {
+    return new Ray(hitPoint, lightPosition.sub(hitPoint).normalize());
+  }
+
+  traceScene(ray) {
+    return null; 
   }
 
   async createShaders() {

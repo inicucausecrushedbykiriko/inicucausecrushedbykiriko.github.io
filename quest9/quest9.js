@@ -68,14 +68,18 @@ async function init() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 't') {
-      shadowMode = (shadowMode + 1) % 2; // Toggle between Hard and Soft Shadows
+      shadowMode = (shadowMode + 1) % 3; // Toggle between Hard, Soft, and SDF Shadows
       switch (shadowMode) {
         case 0:
           shadowText.updateText('Shadow Mode: Hard Shadows');
           tracerObj.updateShadowMode(shadowMode);
           break;
         case 1:
-          shadowText.updateText('Shadow Mode: Soft Shadows');
+          shadowText.updateText('Shadow Mode: PCF Shadows');
+          tracerObj.updateShadowMode(shadowMode);
+          break;
+        case 2:
+          shadowText.updateText('Shadow Mode: SDF Shadows');
           tracerObj.updateShadowMode(shadowMode);
           break;
       }
