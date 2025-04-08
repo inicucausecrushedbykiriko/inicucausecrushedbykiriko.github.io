@@ -27,16 +27,16 @@ struct Pose {
 }
 
 fn translate(pt: vec3f, dx: f32, dy: f32, dz: f32) -> vec3f {
-  return vec3f(pt.x + dx, pt.y + dy, pt.z + dz);
+  return vec3f(pt.x+dx, pt.y+dy, pt.z+dz);
 }
 
 fn rotate(pt: vec3f, axis: i32, angle: f32) -> vec3f {
   let c = cos(angle);
   let s = sin(angle);
-  switch (axis) {
-    case 0: { return vec3f(pt.x, pt.y * c - pt.z * s, pt.y * s + pt.z * c); }
-    case 1: { return vec3f(pt.x * c + pt.z * s, pt.y, -pt.x * s + pt.z * c); }
-    case 2: { return vec3f(pt.x * c - pt.y * s, pt.x * s + pt.y * c, pt.z); }
+  switch(axis) {
+    case 0: { return vec3f(pt.x, pt.y*c - pt.z*s, pt.y*s + pt.z*c); }
+    case 1: { return vec3f(pt.x*c + pt.z*s, pt.y, -pt.x*s + pt.z*c); }
+    case 2: { return vec3f(pt.x*c - pt.y*s, pt.x*s + pt.y*c, pt.z); }
     default: { return pt; }
   }
 }
@@ -89,7 +89,7 @@ struct Quad {
 struct Box {
   pose: Pose,
   scale: vec4f,
-  faces: array<Quad, 6>,
+  faces: array<Quad,6>,
 }
 
 struct Scene {
@@ -100,201 +100,182 @@ struct Scene {
   cylinderScale: vec4f,
   conePose: Pose,
   coneScale: vec4f,
+  ellipsoidPose: Pose,
+  ellipsoidScale: vec4f,
 }
 
 @group(0) @binding(0) var<uniform> cameraPose: Camera;
 @group(0) @binding(1) var<uniform> scene: Scene;
-@group(0) @binding(2) var outTexture: texture_storage_2d<rgba8unorm, write>;
+@group(0) @binding(2) var outTexture: texture_storage_2d<rgba8unorm,write>;
 
 fn quadRayHitCheck(s: vec3f, d: vec3f, q: Quad, currentT: f32) -> vec2f {
   var nt = -1.0;
   if (abs(q.ll.z - q.ur.z) <= EPSILON) {
-    let t = (q.ll.z - s.z) / d.z;
-    if (t > 0.0) {
-      let hp = s + t * d;
-      if (q.ll.x < hp.x && hp.x < q.ur.x && q.ll.y < hp.y && hp.y < q.ur.y) {
+    let t = (q.ll.z - s.z)/d.z;
+    if(t>0.0) {
+      let hp = s+t*d;
+      if(q.ll.x < hp.x && hp.x < q.ur.x && q.ll.y < hp.y && hp.y < q.ur.y) {
         nt = t;
       }
     }
   } else if (abs(q.ll.y - q.ur.y) <= EPSILON) {
-    let t = (q.ll.y - s.y) / d.y;
-    if (t > 0.0) {
-      let hp = s + t * d;
-      if (q.ll.x < hp.x && hp.x < q.ur.x && q.ll.z < hp.z && hp.z < q.ur.z) {
+    let t = (q.ll.y - s.y)/d.y;
+    if(t>0.0) {
+      let hp = s+t*d;
+      if(q.ll.x < hp.x && hp.x < q.ur.x && q.ll.z < hp.z && hp.z < q.ur.z) {
         nt = t;
       }
     }
   } else if (abs(q.ll.x - q.ur.x) <= EPSILON) {
-    let t = (q.ll.x - s.x) / d.x;
-    if (t > 0.0) {
-      let hp = s + t * d;
-      if (q.ll.y < hp.y && hp.y < q.ur.y && q.ll.z < hp.z && hp.z < q.ur.z) {
+    let t = (q.ll.x - s.x)/d.x;
+    if(t>0.0) {
+      let hp = s+t*d;
+      if(q.ll.y < hp.y && hp.y < q.ur.y && q.ll.z < hp.z && hp.z < q.ur.z) {
         nt = t;
       }
     }
   }
-  if (nt < 0.0) {
+  if(nt < 0.0) {
     return vec2f(currentT, -1.0);
-  } else if (currentT < 0.0) {
+  } else if(currentT < 0.0) {
     return vec2f(nt, 1.0);
   } else {
-    if (nt < currentT) {
-      return vec2f(nt, 1.0);
-    } else {
-      return vec2f(currentT, -1.0);
-    }
+    if(nt < currentT) { return vec2f(nt, 1.0); }
+    else { return vec2f(currentT, -1.0); }
   }
 }
 
 fn rayBoxIntersection(sp: vec3f, d: vec3f) -> vec2f {
   var t = -1.0;
   var idx = -1.0;
-  for (var i = 0; i < 6; i++) {
+  for(var i = 0; i < 6; i = i + 1) {
     let info = quadRayHitCheck(sp, d, scene.box.faces[i], t);
-    if (info.y > 0.0) {
-      t = info.x;
-      idx = f32(i);
-    }
+    if(info.y > 0.0) { t = info.x; idx = f32(i); }
   }
   return vec2f(t, idx);
 }
 
 fn raySphereIntersection(sp: vec3f, d: vec3f, radius: f32) -> f32 {
-  let A = dot(d, d);
-  let B = 2.0 * dot(sp, d);
-  let C = dot(sp, sp) - radius * radius;
-  let disc = B * B - 4.0 * A * C;
-  if (disc < 0.0) {
-    return -1.0;
-  }
+  let A = dot(d,d);
+  let B = 2.0 * dot(sp,d);
+  let C = dot(sp,sp) - radius*radius;
+  let disc = B*B - 4.0*A*C;
+  if(disc < 0.0) { return -1.0; }
   let sd = sqrt(disc);
-  let t1 = (-B - sd) / (2.0 * A);
-  let t2 = (-B + sd) / (2.0 * A);
+  let t1 = (-B - sd)/(2.0*A);
+  let t2 = (-B + sd)/(2.0*A);
   var tHit = -1.0;
-  if (t1 > 0.0 && t2 > 0.0) {
-    tHit = min(t1, t2);
-  } else if (t1 > 0.0) {
-    tHit = t1;
-  } else if (t2 > 0.0) {
-    tHit = t2;
-  }
+  if(t1>0.0 && t2>0.0) { tHit = min(t1,t2); }
+  else if(t1 > 0.0) { tHit = t1; }
+  else if(t2 > 0.0) { tHit = t2; }
   return tHit;
 }
 
 fn rayCylinderIntersection(sp: vec3f, d: vec3f, radius: f32, halfH: f32) -> f32 {
-  let A = d.x * d.x + d.z * d.z;
-  if (A < EPSILON) {
-    return -1.0;
-  }
-  let B = 2.0 * (sp.x * d.x + sp.z * d.z);
-  let C = sp.x * sp.x + sp.z * sp.z - radius * radius;
-  let disc = B * B - 4.0 * A * C;
-  if (disc < 0.0) {
-    return -1.0;
-  }
+  let A = d.x*d.x + d.z*d.z;
+  if(A < EPSILON) { return -1.0; }
+  let B = 2.0*(sp.x*d.x + sp.z*d.z);
+  let C = sp.x*sp.x + sp.z*sp.z - radius*radius;
+  let disc = B*B - 4.0*A*C;
+  if(disc < 0.0) { return -1.0; }
   let sd = sqrt(disc);
-  let t1 = (-B - sd) / (2.0 * A);
-  let t2 = (-B + sd) / (2.0 * A);
+  let t1 = (-B - sd)/(2.0*A);
+  let t2 = (-B + sd)/(2.0*A);
   var tHit = -1.0;
-  if (t1 > 0.0 && t2 > 0.0) {
-    let tchk = min(t1, t2);
-    let yhit = sp.y + tchk * d.y;
-    if (abs(yhit) <= halfH) {
-      tHit = tchk;
-    } else {
-      let other = max(t1, t2);
-      if (other > 0.0) {
-        let y2 = sp.y + other * d.y;
-        if (abs(y2) <= halfH) {
-          tHit = other;
-        }
+  if(t1>0.0 && t2>0.0) {
+    let tchk = min(t1,t2);
+    let yhit = sp.y + tchk*d.y;
+    if(abs(yhit) <= halfH) { tHit = tchk; }
+    else {
+      let other = max(t1,t2);
+      if(other > 0.0) {
+        let y2 = sp.y + other*d.y;
+        if(abs(y2) <= halfH) { tHit = other; }
       }
     }
-  } else if (t1 > 0.0) {
-    let y1 = sp.y + t1 * d.y;
-    if (abs(y1) <= halfH) {
-      tHit = t1;
-    }
-  } else if (t2 > 0.0) {
-    let y2 = sp.y + t2 * d.y;
-    if (abs(y2) <= halfH) {
-      tHit = t2;
-    }
+  } else if(t1 > 0.0) {
+    let y1 = sp.y + t1*d.y;
+    if(abs(y1) <= halfH) { tHit = t1; }
+  } else if(t2 > 0.0) {
+    let y2 = sp.y + t2*d.y;
+    if(abs(y2) <= halfH) { tHit = t2; }
   }
   return tHit;
 }
 
 fn rayConeIntersection(sp: vec3f, d: vec3f, radius: f32, halfH: f32) -> vec2f {
-  // For a finite cone with apex at y = +halfH and base at y = -halfH.
-  // In local coordinates, the cone side satisfies: x^2 + z^2 = (slope^2)*(y - halfH)^2
   let slope = radius / (2.0 * halfH);
   let sy = sp.y - halfH;
   let dy = d.y;
   let A = d.x*d.x + d.z*d.z - slope*slope*(dy*dy);
-  if (abs(A) < EPSILON) {
-    return vec2f(-1.0, -1.0);
-  }
+  if(abs(A) < EPSILON) { return vec2f(-1.0, -1.0); }
   let B = 2.0*(sp.x*d.x + sp.z*d.z - slope*slope*(sy*dy));
   let C = sp.x*sp.x + sp.z*sp.z - slope*slope*(sy*sy);
   let disc = B*B - 4.0*A*C;
   var bestT = -1.0;
-  var faceIdx = -1.0; // 8: cone side, 9: cone base
-  if (disc >= 0.0) {
+  var faceIdx = -1.0;
+  if(disc >= 0.0) {
     let sd = sqrt(disc);
-    let t1 = (-B - sd) / (2.0 * A);
-    let t2 = (-B + sd) / (2.0 * A);
-    if (t1 > 0.0 && t2 > 0.0) {
+    let t1 = (-B - sd)/(2.0*A);
+    let t2 = (-B + sd)/(2.0*A);
+    if(t1 > 0.0 && t2 > 0.0) {
       let tside = min(t1, t2);
-      let yhit = sp.y + tside * d.y;
-      if (yhit >= -halfH && yhit <= halfH) {
-        bestT = tside;
-        faceIdx = 8;
-      } else {
-        // Use mutable variable for tdisc.
+      let yhit = sp.y + tside*d.y;
+      if(yhit >= -halfH && yhit <= halfH) { bestT = tside; faceIdx = 8; }
+      else {
         var tdisc : f32 = -1.0;
-        if (t1 > t2) {
-          tdisc = t1;
-        } else {
-          tdisc = t2;
-        }
-        if (tdisc > 0.0) {
-          let y2 = sp.y + tdisc * d.y;
-          if (y2 >= -halfH && y2 <= halfH) {
-            bestT = tdisc;
-            faceIdx = 8;
-          }
+        if(t1 > t2) { tdisc = t1; } else { tdisc = t2; }
+        if(tdisc > 0.0) {
+          let y2 = sp.y + tdisc*d.y;
+          if(y2 >= -halfH && y2 <= halfH) { bestT = tdisc; faceIdx = 8; }
         }
       }
-    } else if (t1 > 0.0) {
-      let y1 = sp.y + t1 * d.y;
-      if (y1 >= -halfH && y1 <= halfH) {
-        bestT = t1;
-        faceIdx = 8;
-      }
-    } else if (t2 > 0.0) {
-      let y2 = sp.y + t2 * d.y;
-      if (y2 >= -halfH && y2 <= halfH) {
-        bestT = t2;
-        faceIdx = 8;
-      }
+    } else if(t1 > 0.0) {
+      let y1 = sp.y + t1*d.y;
+      if(y1 >= -halfH && y1 <= halfH) { bestT = t1; faceIdx = 8; }
+    } else if(t2 > 0.0) {
+      let y2 = sp.y + t2*d.y;
+      if(y2 >= -halfH && y2 <= halfH) { bestT = t2; faceIdx = 8; }
     }
   }
   var tdisc : f32 = -1.0;
-  if (abs(d.y) > EPSILON) {
+  if(abs(d.y) > EPSILON) {
     let tbase = (-halfH - sp.y) / d.y;
-    if (tbase > 0.0) {
-      let xh = sp.x + tbase * d.x;
-      let zh = sp.z + tbase * d.z;
-      if (xh*xh + zh*zh <= radius*radius) {
-        tdisc = tbase;
-      }
+    if(tbase > 0.0) {
+      let xh = sp.x + tbase*d.x;
+      let zh = sp.z + tbase*d.z;
+      if(xh*xh + zh*zh <= radius*radius) { tdisc = tbase; }
     }
   }
-  if (tdisc > 0.0 && (bestT < 0.0 || tdisc < bestT)) {
+  if(tdisc > 0.0 && (bestT < 0.0 || tdisc < bestT)) {
     bestT = tdisc;
     faceIdx = 9;
   }
   return vec2f(bestT, f32(faceIdx));
+}
+
+fn transformRayForEllipsoid(s: vec3f, d: vec3f) -> array<vec3f,2> {
+  let sCam = applyPoseToPoint(s, cameraPose.pose);
+  let dCam = applyPoseToDir(d, cameraPose.pose);
+  let sLocal = applyReversePoseToPoint(sCam, scene.ellipsoidPose);
+  let dLocal = applyReversePoseToDir(dCam, scene.ellipsoidPose);
+  return array<vec3f,2>(sLocal, dLocal);
+}
+
+fn rayEllipsoidIntersection(sp: vec3f, d: vec3f, rad: vec3f) -> f32 {
+  let A = (d.x*d.x)/(rad.x*rad.x) + (d.y*d.y)/(rad.y*rad.y) + (d.z*d.z)/(rad.z*rad.z);
+  let B = 2.0*((sp.x*d.x)/(rad.x*rad.x) + (sp.y*d.y)/(rad.y*rad.y) + (sp.z*d.z)/(rad.z*rad.z));
+  let C = (sp.x*sp.x)/(rad.x*rad.x) + (sp.y*sp.y)/(rad.y*rad.y) + (sp.z*sp.z)/(rad.z*rad.z) - 1.0;
+  let disc = B*B - 4.0*A*C;
+  if(disc < 0.0) { return -1.0; }
+  let sd = sqrt(disc);
+  let t1 = (-B - sd)/(2.0*A);
+  let t2 = (-B + sd)/(2.0*A);
+  var tHit = -1.0;
+  if(t1>0.0 && t2>0.0) { tHit = min(t1,t2); }
+  else if(t1 > 0.0) { tHit = t1; }
+  else if(t2 > 0.0) { tHit = t2; }
+  return tHit;
 }
 
 fn transformRayForBox(s: vec3f, d: vec3f) -> array<vec3f,2> {
@@ -329,12 +310,10 @@ fn transformRayForCone(s: vec3f, d: vec3f) -> array<vec3f,2> {
   return array<vec3f,2>(sLocal, dLocal);
 }
 
-// assignColor: 
-// box faces 0..5, sphere 6, cylinder 7, cone side 8, cone base 9.
 fn assignColor(uv: vec2i, t: f32, faceIndex: i32) {
   var c: vec4f;
-  if (t > 0.0) {
-    if (faceIndex >= 0 && faceIndex < 6) {
+  if(t > 0.0) {
+    if(faceIndex >= 0 && faceIndex < 6) {
       var baseC: vec4f;
       switch(faceIndex) {
         case 0: { baseC = vec4f(232./255.,119./255.,34./255.,1.); break; }
@@ -348,29 +327,32 @@ fn assignColor(uv: vec2i, t: f32, faceIndex: i32) {
       let factor = clamp(t/3.0, 0.0, 1.0);
       let depthColor = mix(vec3f(1.0,0.0,0.0), vec3f(0.0,0.0,1.0), factor);
       let finalRGB = mix(baseC.xyz, depthColor, 0.6);
-      c = vec4f(finalRGB, 1.0);
-    } else if (faceIndex == 6) {
+      c = vec4f(finalRGB,1.0);
+    } else if(faceIndex == 6) {
       let factor = clamp(t/3.0, 0.0, 1.0);
       let depthColor = mix(vec3f(1.0,0.0,0.0), vec3f(0.0,0.0,1.0), factor);
       let finalRGB = mix(vec3f(1.0,0.0,1.0), depthColor, 0.6);
-      c = vec4f(finalRGB, 1.0);
-    } else if (faceIndex == 7) {
+      c = vec4f(finalRGB,1.0);
+    } else if(faceIndex == 7) {
       let factor = clamp(t/3.0, 0.0, 1.0);
       let depthColor = mix(vec3f(1.0,1.0,0.0), vec3f(0.0,1.0,0.0), factor);
       let finalRGB = mix(vec3f(0.0,1.0,0.0), depthColor, 0.7);
-      c = vec4f(finalRGB, 1.0);
-    } else if (faceIndex == 8) {
-      // cone side
+      c = vec4f(finalRGB,1.0);
+    } else if(faceIndex == 8) {
       let factor = clamp(t/3.0, 0.0, 1.0);
       let depthColor = mix(vec3f(1.0,0.5,0.0), vec3f(0.0,1.0,1.0), factor);
       let finalRGB = mix(vec3f(1.0,0.5,1.0), depthColor, 0.4);
-      c = vec4f(finalRGB, 1.0);
-    } else if (faceIndex == 9) {
-      // cone base
+      c = vec4f(finalRGB,1.0);
+    } else if(faceIndex == 9) {
       let factor = clamp(t/3.0, 0.0, 1.0);
       let depthColor = mix(vec3f(1.0,0.3,0.3), vec3f(0.1,0.1,1.0), factor);
       let finalRGB = mix(vec3f(1.0,1.0,0.0), depthColor, 0.5);
-      c = vec4f(finalRGB, 1.0);
+      c = vec4f(finalRGB,1.0);
+    } else if(faceIndex == 10) {
+      let factor = clamp(t/3.0, 0.0, 1.0);
+      let depthColor = mix(vec3f(0.5,0.0,0.5), vec3f(0.0,0.5,0.5), factor);
+      let finalRGB = mix(vec3f(0.7,0.7,0.0), depthColor, 0.6);
+      c = vec4f(finalRGB,1.0);
     } else {
       c = vec4f(1.0,1.0,1.0,1.0);
     }
@@ -385,8 +367,8 @@ fn assignColor(uv: vec2i, t: f32, faceIndex: i32) {
 fn computeOrthogonalMain(@builtin(global_invocation_id) gid: vec3u) {
   let uv = vec2i(gid.xy);
   let texDim = vec2i(textureDimensions(outTexture));
-  if (uv.x < texDim.x && uv.y < texDim.y) {
-    let psize = vec2f(2.,2.) / cameraPose.res;
+  if(uv.x < texDim.x && uv.y < texDim.y) {
+    let psize = vec2f(2.,2.)/cameraPose.res;
     let startPt = vec3f((f32(uv.x)+0.5)*psize.x-1., (f32(uv.y)+0.5)*psize.y-1., 0.);
     let dir = vec3f(0.,0.,1.);
     let rb = transformRayForBox(startPt, dir);
@@ -397,27 +379,35 @@ fn computeOrthogonalMain(@builtin(global_invocation_id) gid: vec3u) {
     let cT = rayCylinderIntersection(rc[0], rc[1], scene.cylinderScale.x, scene.cylinderScale.y);
     let rcone = transformRayForCone(startPt, dir);
     let coneInfo = rayConeIntersection(rcone[0], rcone[1], scene.coneScale.x, scene.coneScale.y);
+    let re = transformRayForEllipsoid(startPt, dir);
+    let rad = vec3f(scene.ellipsoidScale.x, scene.ellipsoidScale.y, scene.ellipsoidScale.z);
+    let eT = rayEllipsoidIntersection(re[0], re[1], rad);
     var finalT = -1.0;
     var fIdx = -1.0;
-    if (boxHit.x > 0.0 && (sT < 0.0 || boxHit.x < sT) &&
-        (cT < 0.0 || boxHit.x < cT) && (coneInfo.x < 0.0 || boxHit.x < coneInfo.x)) {
-      finalT = boxHit.x;
-      fIdx = boxHit.y;
+    if(boxHit.x>0.0 && (sT < 0.0 || boxHit.x<sT) &&
+       (cT < 0.0 || boxHit.x<cT) && (coneInfo.x < 0.0 || boxHit.x<coneInfo.x) &&
+       (eT < 0.0 || boxHit.x < eT)) {
+      finalT = boxHit.x; fIdx = boxHit.y;
     }
-    if (sT > 0.0 && (finalT < 0.0 || sT < finalT) &&
-        (cT < 0.0 || sT < cT) && (coneInfo.x < 0.0 || sT < coneInfo.x)) {
-      finalT = sT;
-      fIdx = 6.0;
+    if(sT>0.0 && (finalT<0.0 || sT<finalT) &&
+       (cT < 0.0 || sT<cT) && (coneInfo.x < 0.0 || sT<coneInfo.x) &&
+       (eT < 0.0 || sT < eT)) {
+      finalT = sT; fIdx = 6.0;
     }
-    if (cT > 0.0 && (finalT < 0.0 || cT < finalT) &&
-        (sT < 0.0 || cT < sT) && (coneInfo.x < 0.0 || cT < coneInfo.x)) {
-      finalT = cT;
-      fIdx = 7.0;
+    if(cT>0.0 && (finalT<0.0 || cT<finalT) &&
+       (sT < 0.0 || cT<sT) && (coneInfo.x < 0.0 || cT<coneInfo.x) &&
+       (eT < 0.0 || cT < eT)) {
+      finalT = cT; fIdx = 7.0;
     }
-    if (coneInfo.x > 0.0 && (finalT < 0.0 || coneInfo.x < finalT) &&
-        (sT < 0.0 || coneInfo.x < sT) && (cT < 0.0 || coneInfo.x < cT)) {
-      finalT = coneInfo.x;
-      fIdx = coneInfo.y;
+    if(coneInfo.x>0.0 && (finalT<0.0 || coneInfo.x<finalT) &&
+       (sT < 0.0 || coneInfo.x<sT) && (cT < 0.0 || coneInfo.x<cT) &&
+       (eT < 0.0 || coneInfo.x < eT)) {
+      finalT = coneInfo.x; fIdx = coneInfo.y;
+    }
+    if(eT>0.0 && (finalT<0.0 || eT<finalT) &&
+       (sT < 0.0 || eT<sT) && (cT < 0.0 || eT<cT) &&
+       (coneInfo.x < 0.0 || eT < coneInfo.x)) {
+      finalT = eT; fIdx = 10.0;
     }
     assignColor(uv, finalT, i32(fIdx));
   }
@@ -428,11 +418,11 @@ fn computeOrthogonalMain(@builtin(global_invocation_id) gid: vec3u) {
 fn computeProjectiveMain(@builtin(global_invocation_id) gid: vec3u) {
   let uv = vec2i(gid.xy);
   let texDim = vec2i(textureDimensions(outTexture));
-  if (uv.x < texDim.x && uv.y < texDim.y) {
-    let xNdc = (f32(uv.x)+0.5) / cameraPose.res.x * 2.0 - 1.0;
-    let yNdc = (f32(uv.y)+0.5) / cameraPose.res.y * 2.0 - 1.0;
-    let px = xNdc / cameraPose.focal.x;
-    let py = yNdc / cameraPose.focal.y;
+  if(uv.x < texDim.x && uv.y < texDim.y) {
+    let xNdc = (f32(uv.x)+0.5)/cameraPose.res.x*2.0-1.0;
+    let yNdc = (f32(uv.y)+0.5)/cameraPose.res.y*2.0-1.0;
+    let px = xNdc/cameraPose.focal.x;
+    let py = yNdc/cameraPose.focal.y;
     let startPt = vec3f(0.,0.,0.);
     let dir = normalize(vec3f(px,py,1.0));
     let rb = transformRayForBox(startPt, dir);
@@ -443,27 +433,35 @@ fn computeProjectiveMain(@builtin(global_invocation_id) gid: vec3u) {
     let cT = rayCylinderIntersection(rc[0], rc[1], scene.cylinderScale.x, scene.cylinderScale.y);
     let rcone = transformRayForCone(startPt, dir);
     let coneInfo = rayConeIntersection(rcone[0], rcone[1], scene.coneScale.x, scene.coneScale.y);
+    let re = transformRayForEllipsoid(startPt, dir);
+    let rad = vec3f(scene.ellipsoidScale.x, scene.ellipsoidScale.y, scene.ellipsoidScale.z);
+    let eT = rayEllipsoidIntersection(re[0], re[1], rad);
     var finalT = -1.0;
     var fIdx = -1.0;
-    if (boxHit.x > 0.0 && (sT < 0.0 || boxHit.x < sT) &&
-        (cT < 0.0 || boxHit.x < cT) && (coneInfo.x < 0.0 || boxHit.x < coneInfo.x)) {
-      finalT = boxHit.x;
-      fIdx = boxHit.y;
+    if(boxHit.x>0.0 && (sT < 0.0 || boxHit.x<sT) &&
+       (cT < 0.0 || boxHit.x<cT) && (coneInfo.x < 0.0 || boxHit.x<coneInfo.x) &&
+       (eT < 0.0 || boxHit.x < eT)) {
+      finalT = boxHit.x; fIdx = boxHit.y;
     }
-    if (sT > 0.0 && (finalT < 0.0 || sT < finalT) &&
-        (cT < 0.0 || sT < cT) && (coneInfo.x < 0.0 || sT < coneInfo.x)) {
-      finalT = sT;
-      fIdx = 6.0;
+    if(sT>0.0 && (finalT<0.0 || sT<finalT) &&
+       (cT < 0.0 || sT<cT) && (coneInfo.x < 0.0 || sT<coneInfo.x) &&
+       (eT < 0.0 || sT < eT)) {
+      finalT = sT; fIdx = 6.0;
     }
-    if (cT > 0.0 && (finalT < 0.0 || cT < finalT) &&
-        (sT < 0.0 || cT < sT) && (coneInfo.x < 0.0 || cT < coneInfo.x)) {
-      finalT = cT;
-      fIdx = 7.0;
+    if(cT>0.0 && (finalT<0.0 || cT<finalT) &&
+       (sT < 0.0 || cT<sT) && (coneInfo.x < 0.0 || cT<coneInfo.x) &&
+       (eT < 0.0 || cT < eT)) {
+      finalT = cT; fIdx = 7.0;
     }
-    if (coneInfo.x > 0.0 && (finalT < 0.0 || coneInfo.x < finalT) &&
-        (sT < 0.0 || coneInfo.x < sT) && (cT < 0.0 || coneInfo.x < cT)) {
-      finalT = coneInfo.x;
-      fIdx = coneInfo.y;
+    if(coneInfo.x>0.0 && (finalT<0.0 || coneInfo.x<finalT) &&
+       (sT < 0.0 || coneInfo.x<sT) && (cT < 0.0 || coneInfo.x<cT) &&
+       (eT < 0.0 || coneInfo.x < eT)) {
+      finalT = coneInfo.x; fIdx = coneInfo.y;
+    }
+    if(eT>0.0 && (finalT<0.0 || eT<finalT) &&
+       (sT < 0.0 || eT<sT) && (cT < 0.0 || eT<cT) &&
+       (coneInfo.x < 0.0 || eT < coneInfo.x)) {
+      finalT = eT; fIdx = 10.0;
     }
     assignColor(uv, finalT, i32(fIdx));
   }
