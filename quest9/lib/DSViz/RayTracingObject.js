@@ -65,8 +65,34 @@ export default class RayTracingObject extends SceneObject {
     this._wgWidth = Math.ceil(outTexture.width);
     this._wgHeight = Math.ceil(outTexture.height);
   }
+
+  // Add a method to handle area light sampling for soft shadows
+  calculateSoftShadows(hitPoint, lightSource) {
+    let numSamples = 16; // Number of samples for soft shadow
+    let shadowIntensity = 0;
+    for (let i = 0; i < numSamples; i++) {
+        // Sample random positions around the light source
+        let offset = this.getRandomOffsetForLight();
+        let lightPosition = lightSource.position.add(offset);
+        let shadowRay = this.calculateShadowRay(hitPoint, lightPosition);
+        if (!this.isInShadow(shadowRay)) {
+            shadowIntensity += 1;
+        }
+    }
+    return shadowIntensity / numSamples; // Average over all samples
+  }
+
   
   compute(pass) {
+        // Loop through all objects in the scene
+    for (const object of this._sceneObjects) {
+        // Perform ray tracing for each object
+        let shadowRay = this.calculateShadowRay(hitPoint, lightPosition);
+        if (this.isInShadow(shadowRay)) {
+            // If the point is in shadow, skip rendering this point
+            return;
+        }
+    }
     // add to compute pass
     pass.setPipeline(this._computePipeline);                // set the compute pipeline
     pass.setBindGroup(0, this._bindGroup);                  // bind the buffer

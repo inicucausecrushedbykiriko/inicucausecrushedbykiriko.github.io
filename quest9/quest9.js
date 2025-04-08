@@ -33,36 +33,55 @@ import Camera from '/quest9/lib/Viz/3DCamera2.js'
 import PointLight from '/quest9/lib/Viz/PointLight.js'
 
 async function init() {
-  // Create a canvas tag
   const canvasTag = document.createElement('canvas');
   canvasTag.id = "renderCanvas";
   document.body.appendChild(canvasTag);
-  // Create a ray tracer
+
   const tracer = new RayTracer(canvasTag);
   await tracer.init();
-  // Create a 3D Camera
+
   var camera = new Camera();
-  // set a fixed pose for the starter code demo
   camera._pose[4] = -0.25;
   camera._pose[5] = 0.25;
   camera._pose[6] = -0.25;
-  // Create an object to trace
-  var tracerObj = new RayTracingBoxLightObject(tracer._device, tracer._canvasFormat, camera);
+
+  const tracerObj = new RayTracingBoxLightObject(tracer._device, tracer._canvasFormat, camera);
   await tracer.setTracerObject(tracerObj);
-  // Create a light object and set it to our box light object
-  // if you want to change light, you just need to change this object and upload it to the GPU by calling traceObje.updateLight(light)
+
   var light = new PointLight();
   tracerObj.updateLight(light);
-  
+
   let fps = '??';
   var fpsText = new StandardTextObject('fps: ' + fps);
-  
-  // run animation at 60 fps
-  var frameCnt = 0;
-  var tgtFPS = 60;
-  var secPerFrame = 1. / tgtFPS;
-  var frameInterval = secPerFrame * 1000;
-  var lastCalled;
+  let helpText = new StandardTextObject('Press "t" to toggle shadow mode');
+  helpText._textCanvas.style.top = '40px';
+
+  let shadowMode = 0; // 0 - Hard Shadows, 1 - Soft Shadows
+  var shadowText = new StandardTextObject('Shadow Mode: Hard Shadows');
+  shadowText._textCanvas.style.top = '70px';
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 't') {
+      shadowMode = (shadowMode + 1) % 2; // Toggle between Hard and Soft Shadows
+      switch (shadowMode) {
+        case 0:
+          shadowText.updateText('Shadow Mode: Hard Shadows');
+          tracerObj.updateShadowMode(shadowMode);
+          break;
+        case 1:
+          shadowText.updateText('Shadow Mode: Soft Shadows');
+          tracerObj.updateShadowMode(shadowMode);
+          break;
+      }
+    }
+  });
+
+  let frameCnt = 0;
+  let tgtFPS = 60;
+  let secPerFrame = 1. / tgtFPS;
+  let frameInterval = secPerFrame * 1000;
+  let lastCalled;
+
   let renderFrame = () => {
     let elapsed = Date.now() - lastCalled;
     if (elapsed > frameInterval) {
@@ -72,18 +91,21 @@ async function init() {
     }
     requestAnimationFrame(renderFrame);
   };
+
   lastCalled = Date.now();
   renderFrame();
-  setInterval(() => { 
+
+  setInterval(() => {
     fpsText.updateText('fps: ' + frameCnt);
     frameCnt = 0;
-  }, 1000); // call every 1000 ms
+  }, 1000);
+
   return tracer;
 }
 
-init().then( ret => {
+init().then((ret) => {
   console.log(ret);
-}).catch( error => {
+}).catch((error) => {
   const pTag = document.createElement('p');
   pTag.innerHTML = navigator.userAgent + "</br>" + error.message;
   document.body.appendChild(pTag);
