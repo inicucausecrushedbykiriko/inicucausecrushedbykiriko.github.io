@@ -28,7 +28,7 @@ export default class Camera {
     this._pose = new Float32Array(8).fill(0);
     this._focal = new Float32Array(2).fill(1);
     this._resolutions = new Float32Array([width, height]);
-    this._mode = "pinhole"; 
+    this._mode = "orthographic"; // "orthographic", "projective", or "fishball"
   }
   
   resetPose() {
